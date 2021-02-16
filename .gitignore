@@ -229,3 +229,6 @@ dmypy.json
 
 # profiling data
 .prof
+
+# Others
+.json

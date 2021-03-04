@@ -14,6 +14,16 @@ from PIL import Image
 from vk_api import VkUpload
 from pprint import pprint
 
+# TODO:
+#  Отображение расписания с сайта
+#  Поддержка голосового ввода
+#  Загрузка расписания в бд (после этого можно будет добавлять заметки)
+#  1 Расписание 2. Пользователи/настройки 3. Заметки
+#  Добавление заметок (напротив предмета, см таблицу)
+#  Добавление своих пунктов в расписание (см таблицу)
+#  Вывод расписания из бд (на сегодня/на неделю)
+#  Обновление расписания в бд (с сохранением записей пользователя) !!!!!!!!!!!!!!!!!
+#  Случайный мем
 
 schedules = dict()
 users = dict()
@@ -22,20 +32,28 @@ week_days = ["Понедельник", "Вторник", "Среда", "Четв
 WEATHER_KEY = "05cc2272c262cbc1a3a33fe296be36e0"
 
 
+# TODO:
+#  Почистить код
+#  Сделать конф файл
+#  Убрать погоду
+#  Убрать препода (его расписания)
+#  Переписать по класам
+
+
 def schedule():
     page = requests.get("https://www.mirea.ru/schedule/")
     soup = BeautifulSoup(page.text, "html.parser")
-    result = soup.find("div", {"class": "rasspisanie"}).find(string="Институт информационных технологий").\
+    result = soup.find("div", {"class": "rasspisanie"}).find(string="Институт информационных технологий"). \
         find_parent("div").find_parent("div").findAll("a", {"class": "uk-link-toggle"})
     for x in result:
         for i in range(1, 4):
             if re.search(r'https://webservices.mirea.ru/upload/iblock/ca4/ИИТ_2к_20-21_весна.xlsx', str(x)):
-                f = open("schedule"+str(i)+".xlsx", "wb")
+                f = open("schedule" + str(i) + ".xlsx", "wb")
                 if x["href"] != schedules["link"][i - 1]:
                     filexlsx = requests.get(x["href"])
                     f.write(filexlsx.content)
                     f.close()
-                    parse_table("schedule"+str(i)+".xlsx")
+                    parse_table("schedule" + str(i) + ".xlsx")
                     schedules["link"][i - 1] = x["href"]
     json.dump(schedules, open("schedules_cache.json", "w"))
 
@@ -192,7 +210,8 @@ def schedule_menu(response, vk_session, id, rand_id):
             full_sentence += '\n' + week_day + ':\n' + make_schedule(week_day, student_group, 1) + '\n\n'
         send_message(vk_session, id, rand_id, message='Расписание на следующую неделю: ' + full_sentence)
     if response == "какая неделя?":
-        send_message(vk_session, id, rand_id, message='Сейчас ' + str(number_week(datetime.datetime.now())) + ' неделя.')
+        send_message(vk_session, id, rand_id,
+                     message='Сейчас ' + str(number_week(datetime.datetime.now())) + ' неделя.')
     if response == "какая группа?":
         send_message(vk_session, id, rand_id, message='Твоя группа ' + users[str(id)])
 
@@ -358,7 +377,7 @@ def make_schedule_lecturer(week_day, name, next_week=0):
 def splice(img1, img2):
     (width, height) = img1.size
     (width1, height1) = img2.size
-    img = Image.new(mode = 'RGBA', size = (width + width1, height), color =  (0, 0, 0))
+    img = Image.new(mode='RGBA', size=(width + width1, height), color=(0, 0, 0))
     img.paste(img1, (0, 0))
     img.paste(img2, (width, 0))
     return img
@@ -449,7 +468,7 @@ def day_weather_info(date):
             message = message + day_part + '\n' + temp['text'] + '\n'
             attachment.append(temp['image'])
     for i in range(1, len(attachment)):
-        attachment[i] = splice(attachment[i-1], attachment[i])
+        attachment[i] = splice(attachment[i - 1], attachment[i])
     result.append(message)
     result.append(attachment[-1])
     return result
@@ -524,8 +543,9 @@ def main():
 
             if response == 'начать':
                 send_message(vk_session, event.user_id, get_random_id(), message='Привет, ' +
-                            vk.users.get(user_id=event.user_id)[0]['first_name'] +
-                            '\nНапиши свою группу\nФорма записи группы: ИКБО-09-19')
+                                                                                 vk.users.get(user_id=event.user_id)[0][
+                                                                                     'first_name'] +
+                                                                                 '\nНапиши свою группу\nФорма записи группы: ИКБО-09-19')
                 response = 'Продолжить'
                 keyboard = menu(response)
 
@@ -542,7 +562,8 @@ def main():
                 keyboard = menu(response)
 
             elif response == 'расписание':
-                send_message(vk_session, event.user_id, get_random_id(), message='Выбери возможность', keyboard=keyboard)
+                send_message(vk_session, event.user_id, get_random_id(), message='Выбери возможность',
+                             keyboard=keyboard)
 
             elif response == 'преподаватель':
                 send_message(vk_session, event.user_id, get_random_id(), message='Введите фамилию')
@@ -570,7 +591,8 @@ def main():
                 keyboard = menu(response)
 
             if response == 'Продолжить':
-                send_message(vk_session, event.user_id, get_random_id(), message='Что хочешь посмотреть?', keyboard=keyboard)
+                send_message(vk_session, event.user_id, get_random_id(), message='Что хочешь посмотреть?',
+                             keyboard=keyboard)
 
 
 if __name__ == '__main__':

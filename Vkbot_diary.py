@@ -37,17 +37,19 @@ week_days = ["Понедельник", "Вторник", "Среда", "Четв
 def schedule():
     page = requests.get("https://www.mirea.ru/schedule/")
     soup = BeautifulSoup(page.text, "html.parser")
-    result = soup.find("div", {"class": "rasspisanie"}).find(string="Институт информационных технологий"). \
-        find_parent("div").find_parent("div").findAll("a", {"class": "uk-link-toggle"})
+    result = soup.find("div", {"class": "rasspisanie"}). \
+        find(string="Институт информационных технологий"). \
+        find_parent("div"). \
+        find_parent("div"). \
+        findAll("a", {"class": "uk-link-toggle"})
     for x in result:
-        for i in range(1, 4):
-            if re.search(r'https://webservices.mirea.ru/upload/iblock/366/ИИТ_2к_20-21_весна.xlsx', str(x)):
-                f = open("schedule" + str(i) + ".xlsx", "wb")
+        for i in range(1, 5):
+            if f"{i}к" in x["href"] and "зач" not in x["href"] and "экз" not in x["href"]:
                 if x["href"] != schedules["link"][i - 1]:
-                    filexlsx = requests.get(x["href"])
-                    f.write(filexlsx.content)
-                    f.close()
-                    parse_table("schedule" + str(i) + ".xlsx")
+                    with open(f"schedule-{str(i)}k.xlsx", "wb") as f:
+                        filexlsx = requests.get(x["href"])
+                        f.write(filexlsx.content)
+                    parse_table(f"schedule-{str(i)}k.xlsx")
                     schedules["link"][i - 1] = x["href"]
     json.dump(schedules, open("schedules_cache.json", "w"))
 
@@ -68,13 +70,13 @@ def parse_table(table):
             week = {"Понедельник": None, "Вторник": None, "Среда": None,
                     "Четверг": None, "Пятница": None, "Суббота": None}
             for k in range(6):
-                day = [[], [], [], [], [], []]
+                day = [[] for _ in range(6)]
                 for i in range(6):
                     for j in range(2):
                         subject = sheet.cell(3 + j + i * 2 + k * 12, col_index).value
                         lesson_type = sheet.cell(3 + j + i * 2 + k * 12, col_index + 1).value
                         lecturer = sheet.cell(3 + j + i * 2 + k * 12, col_index + 2).value
-                        lecturer = lecturer.replace(",", ".")
+                        lecturer = str(lecturer).replace(",", ".")
                         classroom = sheet.cell(3 + j + i * 2 + k * 12, col_index + 3).value
                         url = sheet.cell(3 + j + i * 2 + k * 12, col_index + 4).value
                         lesson = {"subject": subject, "lesson_type": lesson_type,
@@ -193,7 +195,7 @@ def main():
     if exists("./schedules_cache.json"):
         schedules = json.load(open("schedules_cache.json", "r"))
     else:
-        schedules = {'link': [1, 1, 1], 'groups': {}}
+        schedules = {'link': [1 for _ in range(4)], 'groups': {}}
     if exists("./users_cache.json"):
         users = json.load(open("users_cache.json", "r"))
     schedule()
@@ -210,7 +212,7 @@ def main():
             if response == 'начать':
                 send_message(vk_session, event.user_id, get_random_id(),
                              message='Привет, ' + vk.users.get(user_id=event.user_id)[0]['first_name'] +
-                             '\nНапиши свою группу\nФорма записи группы: ИКБО-09-19')
+                                     '\nНапиши свою группу\nФорма записи группы: ИКБО-09-19')
                 response = 'Продолжить'
                 keyboard = menu(response)
 

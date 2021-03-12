@@ -232,3 +232,4 @@ dmypy.json
 
 # Others
 *.json
+*.xlsx

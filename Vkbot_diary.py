@@ -164,7 +164,7 @@ def schedule_menu(response, vk_session, id, rand_id):
 
 
 def number_week(day_today):
-    first_week = datetime.datetime(2020, 2, 10).isocalendar()[1]
+    first_week = datetime.datetime(2021, 2, 10).isocalendar()[1]
     current_week = day_today.isocalendar()[1]
     number = current_week - first_week
     return number
@@ -199,8 +199,8 @@ def main():
         schedules = json.load(open("schedules_cache.json", "r"))
     else:
         schedules = {'link': [1 for _ in range(4)], 'groups': {}}
-    if exists("./users_cache.json"):
-        users = json.load(open("users_cache.json", "r"))
+    if exists("./local_files/users_cache.json"):
+        users = json.load(open("local_files/users_cache.json", "r"))
     schedule()
 
     vk_session = vk_api.VkApi(token=config.get_token())
@@ -222,7 +222,7 @@ def main():
             elif re.search(r'([а-я]{2}бо-\d{2}-\d{2})', response):
                 if response.upper() in schedules["groups"]:
                     users[str(event.user_id)] = response.upper()
-                    json.dump(users, open("users_cache.json", "w"))
+                    json.dump(users, open("local_files/users_cache.json", "w"))
                     send_message(vk_session, event.user_id, get_random_id(),
                                  message='Группа сохранена! Номер твоей группы: ' + users[str(event.user_id)])
                 else:

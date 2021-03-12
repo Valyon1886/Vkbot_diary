@@ -10,6 +10,7 @@ from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from bs4 import BeautifulSoup
 from os.path import exists
+from Init_config import Config
 
 # TODO:
 #  Отображение расписания с сайта
@@ -29,7 +30,7 @@ week_days = ["Понедельник", "Вторник", "Среда", "Четв
 
 # TODO:
 #  Почистить код
-#  Сделать конф файл
+#  Сделать конф файл - сделан конфиг для токена, но думаю туда ещё надо будет добавить другие параметры
 #  Переписать по класам
 
 
@@ -187,6 +188,8 @@ def make_schedule(week_day, student_group, next_week=0):
 
 def main():
     global schedules, users, week_days
+    config = Config()
+
     if exists("./schedules_cache.json"):
         schedules = json.load(open("schedules_cache.json", "r"))
     else:
@@ -195,8 +198,7 @@ def main():
         users = json.load(open("users_cache.json", "r"))
     schedule()
 
-    vk_session = vk_api.VkApi(
-        token='ad471dd1cad0f1ee579114a1c2a9a4de239fa03c529db7de8969d3df199aff15c6afc3a9ce2bd1dbb19a1')
+    vk_session = vk_api.VkApi(token=config.get_token())
     vk = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
 

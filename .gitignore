@@ -231,4 +231,4 @@ dmypy.json
 .prof
 
 # Others
-.json
+*.json

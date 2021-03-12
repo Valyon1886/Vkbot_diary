@@ -231,5 +231,4 @@ dmypy.json
 .prof
 
 # Others
-*.json
-*.xlsx
+local_files/*

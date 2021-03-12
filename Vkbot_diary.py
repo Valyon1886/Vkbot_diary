@@ -1,4 +1,5 @@
 import datetime
+import os
 import xlrd
 import re
 import json
@@ -46,12 +47,12 @@ def schedule():
         for i in range(1, 5):
             if f"{i}к" in x["href"] and "зач" not in x["href"] and "экз" not in x["href"]:
                 if x["href"] != schedules["link"][i - 1]:
-                    with open(f"schedule-{str(i)}k.xlsx", "wb") as f:
+                    with open(f"local_files/schedule-{str(i)}k.xlsx", "wb") as f:
                         filexlsx = requests.get(x["href"])
                         f.write(filexlsx.content)
-                    parse_table(f"schedule-{str(i)}k.xlsx")
+                    parse_table(f"local_files/schedule-{str(i)}k.xlsx")
                     schedules["link"][i - 1] = x["href"]
-    json.dump(schedules, open("schedules_cache.json", "w"))
+    json.dump(schedules, open("local_files/schedules_cache.json", "w"))
 
 
 def parse_table(table):
@@ -85,7 +86,7 @@ def parse_table(table):
                 week[week_days[k]] = day
             groups.update({group_cell: week})
     schedules["groups"].update(groups)
-    json.dump(schedules, open("schedules_cache.json", "w"))
+    json.dump(schedules, open("local_files/schedules_cache.json", "w"))
 
 
 def send_message(vk_session, id, rand_id, message=None, keyboard=None):
@@ -190,6 +191,8 @@ def make_schedule(week_day, student_group, next_week=0):
 
 def main():
     global schedules, users, week_days
+    if not os.path.exists("local_files"):
+        os.makedirs("local_files")
     config = Config()
 
     if exists("./schedules_cache.json"):

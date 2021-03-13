@@ -1,5 +1,6 @@
 import re
 import json
+from os.path import exists
 
 import xlrd
 import requests
@@ -8,9 +9,15 @@ from bs4 import BeautifulSoup
 
 class Parser:
     def __init__(self):
-        self.week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+        self._week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+        self._schedules = dict()
+        if exists("./schedules_cache.json"):
+            self._schedules = json.load(open("schedules_cache.json", "r"))
+        else:
+            self._schedules = {'link': [1 for _ in range(4)], 'groups': {}}
+        self.schedule()
 
-    def schedule(self, schedules):
+    def schedule(self):
         page = requests.get("https://www.mirea.ru/schedule/")
         soup = BeautifulSoup(page.text, "html.parser")
         result = soup.find("div", {"class": "rasspisanie"}). \
@@ -21,15 +28,15 @@ class Parser:
         for x in result:
             for i in range(1, 5):
                 if f"{i}к" in x["href"] and "зач" not in x["href"] and "экз" not in x["href"]:
-                    if x["href"] != schedules["link"][i - 1]:
+                    if x["href"] != self._schedules["link"][i - 1]:
                         with open(f"local_files/schedule-{str(i)}k.xlsx", "wb") as f:
                             filexlsx = requests.get(x["href"])
                             f.write(filexlsx.content)
-                        self.parse_table(f"local_files/schedule-{str(i)}k.xlsx", schedules)
-                        schedules["link"][i - 1] = x["href"]
-        json.dump(schedules, open("local_files/schedules_cache.json", "w"))
+                        self._parse_table(f"local_files/schedule-{str(i)}k.xlsx")
+                        self._schedules["link"][i - 1] = x["href"]
+        json.dump(self._schedules, open("local_files/schedules_cache.json", "w"))
 
-    def parse_table(self, table, schedules):
+    def _parse_table(self, table):
         groups = {}
         groups_list = []
         groups_list_all = []
@@ -57,7 +64,10 @@ class Parser:
                             lesson = {"subject": subject, "lesson_type": lesson_type,
                                       "lecturer": lecturer, "classroom": classroom, "url": url}
                             day[i].append(lesson)
-                    week[self.week_days[k]] = day
+                    week[self._week_days[k]] = day
                 groups.update({group_cell: week})
-        schedules["groups"].update(groups)
-        json.dump(schedules, open("local_files/schedules_cache.json", "w"))
+        self._schedules["groups"].update(groups)
+        json.dump(self._schedules, open("local_files/schedules_cache.json", "w"))
+
+    def get_schedules(self):
+        return self._schedules

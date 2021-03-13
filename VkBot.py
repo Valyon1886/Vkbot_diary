@@ -6,62 +6,62 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 
 class VkBot:
-    def __init__(self, ):
+    def __init__(self, vk_session, user_id):
         self._week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+        self._vk_session = vk_session
+        self._user_id = user_id
 
-    def schedule_menu(self, response, vk_session, id, schedules, users):
+    def schedule_menu(self, response, schedules, users):
         if response == "на сегодня":
             week_day = datetime.datetime.now().isoweekday() - 1
             if week_day < 6:
                 week_day = self._week_days[week_day]
-                student_group = schedules["groups"][users[str(id)]]
+                student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence = self._make_schedule(week_day, student_group)
-                self.send_message(vk_session, id, message='Расписание на сегодня:\n' + week_day + '\n' + full_sentence)
+                self.send_message(message='Расписание на сегодня:\n' + week_day + '\n' + full_sentence)
             else:
-                self.send_message(vk_session, id, message='Выходной')
+                self.send_message(message='Выходной')
         if response == "на завтра":
             week_day = datetime.datetime.now().isoweekday()
             if week_day == 7:
                 week_day = 0
             if week_day < 6:
                 week_day = self._week_days[week_day]
-                student_group = schedules["groups"][users[str(id)]]
+                student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence = self._make_schedule(week_day, student_group)
-                self.send_message(vk_session, id, message='Расписание на завтра:\n' + week_day + '\n' + full_sentence)
+                self.send_message(message='Расписание на завтра:\n' + week_day + '\n' + full_sentence)
             else:
-                self.send_message(vk_session, id, message='Выходной')
+                self.send_message(message='Выходной')
         if response == "на эту неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
-                student_group = schedules["groups"][users[str(id)]]
+                student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group) + '\n\n'
-            self.send_message(vk_session, id, message='Расписание на эту неделю: ' + full_sentence)
+            self.send_message(message='Расписание на эту неделю: ' + full_sentence)
         if response == "на следующую неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
-                student_group = schedules["groups"][users[str(id)]]
+                student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group, 1) + '\n\n'
-            self.send_message(vk_session, id, message='Расписание на следующую неделю: ' + full_sentence)
+            self.send_message(message='Расписание на следующую неделю: ' + full_sentence)
         if response == "какая неделя?":
-            self.send_message(vk_session, id, message='Сейчас ' + str(self._get_number_week(datetime.datetime.now())) +
-                                                      ' неделя.')
+            self.send_message(message='Сейчас ' + str(self._get_number_week(datetime.datetime.now())) + ' неделя.')
         if response == "какая группа?":
-            self.send_message(vk_session, id, message='Твоя группа ' + users[str(id)])
+            self.send_message(message='Твоя группа ' + users[str(self._user_id)])
 
-    @staticmethod
-    def send_message(vk_session, id, message=None, keyboard=None):
-        vk_session.method('messages.send',
-                          {'user_id': id, 'message': message, 'random_id': get_random_id(), 'keyboard': keyboard})
+    def send_message(self, message=None, keyboard=None):
+        self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
+                                                 'random_id': get_random_id(), 'keyboard': keyboard})
 
-    @staticmethod
-    def send_pic(vk_session, id, response):
+    def send_pic(self, response):
         response.save('img.png')
-        upload = VkUpload(vk_session)
+        upload = VkUpload(self._vk_session)
         photo = upload.photo_messages('img.png')
         image = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
-        vk_session.method('messages.send', {'user_id': id, 'random_id': get_random_id(), "attachment": image})
+        self._vk_session.method('messages.send', {'user_id': self._user_id, 'random_id': get_random_id(),
+                                                 "attachment": image})
 
     @staticmethod
     def create_menu(response):
@@ -69,6 +69,10 @@ class VkBot:
 
         if response == 'Продолжить':
             keyboard.add_button('Расписание', color=VkKeyboardColor.PRIMARY)
+            keyboard.add_button('Случайный мем', color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
+            keyboard.add_button('Добавить задачу', color=VkKeyboardColor.POSITIVE)
+            keyboard.add_button('Изменить задачу', color=VkKeyboardColor.NEGATIVE)
 
         if response == 'расписание':
             keyboard.add_button('На сегодня', color=VkKeyboardColor.POSITIVE)
@@ -107,5 +111,3 @@ class VkBot:
         current_week = day_today.isocalendar()[1]
         number = current_week - first_week
         return number
-
-

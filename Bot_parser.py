@@ -15,9 +15,9 @@ class Parser:
             self._schedules = json.load(open("schedules_cache.json", "r"))
         else:
             self._schedules = {'link': [1 for _ in range(4)], 'groups': {}}
-        self.schedule()
+        self._schedule()
 
-    def schedule(self):
+    def _schedule(self):
         page = requests.get("https://www.mirea.ru/schedule/")
         soup = BeautifulSoup(page.text, "html.parser")
         result = soup.find("div", {"class": "rasspisanie"}). \

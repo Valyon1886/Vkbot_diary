@@ -1,6 +1,7 @@
 import re
-import json
+from json import dump, load
 from os.path import exists
+from pathlib import Path
 
 import xlrd
 import requests
@@ -8,11 +9,13 @@ from bs4 import BeautifulSoup
 
 
 class Parser:
+    _dir_name = "local_files"
+
     def __init__(self):
         self._week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
         self._schedules = dict()
-        if exists("./schedules_cache.json"):
-            self._schedules = json.load(open("schedules_cache.json", "r"))
+        if exists(Path(self._dir_name + "/schedules_cache.json")):
+            self._schedules = load(open(Path(self._dir_name + "/schedules_cache.json"), "r"))
         else:
             self._schedules = {'link': [1 for _ in range(4)], 'groups': {}}
         self._schedule()
@@ -29,12 +32,12 @@ class Parser:
             for i in range(1, 5):
                 if f"{i}к" in x["href"] and "зач" not in x["href"] and "экз" not in x["href"]:
                     if x["href"] != self._schedules["link"][i - 1]:
-                        with open(f"local_files/schedule-{str(i)}k.xlsx", "wb") as f:
-                            filexlsx = requests.get(x["href"])
+                        filexlsx = requests.get(x["href"])
+                        with open(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"), "wb") as f:
                             f.write(filexlsx.content)
-                        self._parse_table(f"local_files/schedule-{str(i)}k.xlsx")
+                        self._parse_table(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"))
                         self._schedules["link"][i - 1] = x["href"]
-        json.dump(self._schedules, open("local_files/schedules_cache.json", "w"))
+        dump(self._schedules, open(Path(self._dir_name + "/schedules_cache.json"), "w"))
 
     def _parse_table(self, table):
         groups = {}
@@ -67,7 +70,7 @@ class Parser:
                     week[self._week_days[k]] = day
                 groups.update({group_cell: week})
         self._schedules["groups"].update(groups)
-        json.dump(self._schedules, open("local_files/schedules_cache.json", "w"))
+        dump(self._schedules, open(Path(self._dir_name + "/schedules_cache.json"), "w"))
 
     def get_schedules(self):
         return self._schedules

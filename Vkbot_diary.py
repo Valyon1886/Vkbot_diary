@@ -1,4 +1,3 @@
-import datetime
 import os
 import re
 import json
@@ -6,12 +5,11 @@ from os.path import exists
 from Init_config import Config
 
 import vk_api
-from vk_api import VkUpload
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.utils import get_random_id
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
-from bot_parser import Parser
+from Bot_parser import Parser
+from VkBot import VkBot
 
 # TODO:
 #  Отображение расписания с сайта
@@ -24,182 +22,74 @@ from bot_parser import Parser
 #  Обновление расписания в бд (с сохранением записей пользователя) !!!!!!!!!!!!!!!!!
 #  Случайный мем
 
-schedules = dict()
-users = dict()
-week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
-
-
 # TODO:
 #  Почистить код
 #  Сделать конф файл - сделан конфиг для токена, но думаю туда ещё надо будет добавить другие параметры
 #  Переписать по классам
 
+schedules = dict()
+users = dict()
+week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+parser = Parser()
+bot = VkBot()
+if not exists("local_files"):
+    os.makedirs("local_files")
+config = Config()
 
-def send_message(vk_session, id, rand_id, message=None, keyboard=None):
-    vk_session.method('messages.send', {'user_id': id, 'message': message, 'random_id': rand_id, 'keyboard': keyboard})
+if exists("./schedules_cache.json"):
+    schedules = json.load(open("schedules_cache.json", "r"))
+else:
+    schedules = {'link': [1 for _ in range(4)], 'groups': {}}
+if exists("./local_files/users_cache.json"):
+    users = json.load(open("local_files/users_cache.json", "r"))
+parser.schedule(schedules)
 
+vk_session = vk_api.VkApi(token=config.get_token())
+vk = vk_session.get_api()
+longpoll = VkLongPoll(vk_session)
 
-def send_pic(vk_session, id, response):
-    response.save('img.png')
-    upload = VkUpload(vk_session)
-    photo = upload.photo_messages('img.png')
-    image = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
-    vk_session.method('messages.send', {'user_id': id, 'random_id': get_random_id(), "attachment": image})
+for event in longpoll.listen():
+    if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
+        response = event.text.lower()
+        keyboard = bot.menu(response)
 
+        if response == 'начать':
+            bot.send_message(vk_session, event.user_id, get_random_id(),
+                         message='Привет, ' + vk.users.get(user_id=event.user_id)[0]['first_name'] +
+                                 '\nНапиши свою группу\nФорма записи группы: ИКБО-09-19')
+            response = 'Продолжить'
+            keyboard = bot.menu(response)
 
-def menu(response):
-    keyboard = VkKeyboard(one_time=True)
-
-    if response == 'Продолжить':
-        keyboard.add_button('Расписание', color=VkKeyboardColor.PRIMARY)
-
-    if response == 'расписание':
-        keyboard.add_button('На сегодня', color=VkKeyboardColor.POSITIVE)
-        keyboard.add_button('На завтра', color=VkKeyboardColor.NEGATIVE)
-        keyboard.add_line()
-        keyboard.add_button('На эту неделю', color=VkKeyboardColor.PRIMARY)
-        keyboard.add_button('На следующую неделю', color=VkKeyboardColor.PRIMARY)
-        keyboard.add_line()
-        keyboard.add_button('Какая неделя?')
-        keyboard.add_button('Какая группа?')
-
-    keyboard = keyboard.get_keyboard()
-    return keyboard
-
-
-def schedule_menu(response, vk_session, id, rand_id):
-    if response == "на сегодня":
-        week_day = datetime.datetime.now().isoweekday() - 1
-        if week_day < 6:
-            week_day = week_days[week_day]
-            student_group = schedules["groups"][users[str(id)]]
-            full_sentence = make_schedule(week_day, student_group)
-            send_message(vk_session, id, rand_id, message='Расписание на сегодня:\n' + week_day + '\n' + full_sentence)
-        else:
-            send_message(vk_session, id, rand_id, message='Выходной')
-    if response == "на завтра":
-        week_day = datetime.datetime.now().isoweekday()
-        if week_day == 7:
-            week_day = 0
-        if week_day < 6:
-            week_day = week_days[week_day]
-            student_group = schedules["groups"][users[str(id)]]
-            full_sentence = make_schedule(week_day, student_group)
-            send_message(vk_session, id, rand_id, message='Расписание на завтра:\n' + week_day + '\n' + full_sentence)
-        else:
-            send_message(vk_session, id, rand_id, message='Выходной')
-    if response == "на эту неделю":
-        full_sentence = ""
-        for i in range(len(week_days)):
-            week_day = week_days[i]
-            student_group = schedules["groups"][users[str(id)]]
-            full_sentence += '\n' + week_day + ':\n' + make_schedule(week_day, student_group) + '\n\n'
-        send_message(vk_session, id, rand_id, message='Расписание на эту неделю: ' + full_sentence)
-    if response == "на следующую неделю":
-        full_sentence = ""
-        for i in range(len(week_days)):
-            week_day = week_days[i]
-            student_group = schedules["groups"][users[str(id)]]
-            full_sentence += '\n' + week_day + ':\n' + make_schedule(week_day, student_group, 1) + '\n\n'
-        send_message(vk_session, id, rand_id, message='Расписание на следующую неделю: ' + full_sentence)
-    if response == "какая неделя?":
-        send_message(vk_session, id, rand_id,
-                     message='Сейчас ' + str(number_week(datetime.datetime.now())) + ' неделя.')
-    if response == "какая группа?":
-        send_message(vk_session, id, rand_id, message='Твоя группа ' + users[str(id)])
-
-
-def number_week(day_today):
-    first_week = datetime.datetime(2021, 2, 10).isocalendar()[1]
-    current_week = day_today.isocalendar()[1]
-    number = current_week - first_week
-    return number
-
-
-def make_schedule(week_day, student_group, next_week=0):
-    schedules_group = student_group[week_day]
-    chet_week = (number_week(datetime.datetime.now()) + next_week) % 2
-    full_sentence = ""
-    for i in range(len(schedules_group)):
-        if not schedules_group[i][chet_week]['subject']:
-            full_sentence = full_sentence + str(i + 1) + ') --\n'
-        else:
-            full_sentence = full_sentence + str(i + 1) + ') ' + \
-                            schedules_group[i][chet_week]['subject'] + ' ' + \
-                            schedules_group[i][chet_week]['lesson_type'] + '.'
-            if schedules_group[i][chet_week]['lecturer']:
-                full_sentence = full_sentence + ' Преподаватель: ' + schedules_group[i][chet_week]['lecturer']
-            if schedules_group[i][chet_week]['url']:
-                full_sentence = full_sentence + '\nСсылка: ' + schedules_group[i][chet_week]['url']
-            full_sentence = full_sentence + '\n'
-    return full_sentence
-
-
-def main():
-    global schedules, users, week_days
-    parser = Parser()
-    if not exists("local_files"):
-        os.makedirs("local_files")
-    config = Config()
-
-    if exists("./schedules_cache.json"):
-        schedules = json.load(open("schedules_cache.json", "r"))
-    else:
-        schedules = {'link': [1 for _ in range(4)], 'groups': {}}
-    if exists("./local_files/users_cache.json"):
-        users = json.load(open("local_files/users_cache.json", "r"))
-    parser.schedule(schedules)
-
-    vk_session = vk_api.VkApi(token=config.get_token())
-    vk = vk_session.get_api()
-    longpoll = VkLongPoll(vk_session)
-
-    for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
-            response = event.text.lower()
-            keyboard = menu(response)
-
-            if response == 'начать':
-                send_message(vk_session, event.user_id, get_random_id(),
-                             message='Привет, ' + vk.users.get(user_id=event.user_id)[0]['first_name'] +
-                                     '\nНапиши свою группу\nФорма записи группы: ИКБО-09-19')
-                response = 'Продолжить'
-                keyboard = menu(response)
-
-            elif re.search(r'([а-я]{2}бо-\d{2}-\d{2})', response):
-                if response.upper() in schedules["groups"]:
-                    users[str(event.user_id)] = response.upper()
-                    json.dump(users, open("local_files/users_cache.json", "w"))
-                    send_message(vk_session, event.user_id, get_random_id(),
-                                 message='Группа сохранена! Номер твоей группы: ' + users[str(event.user_id)])
-                else:
-                    send_message(vk_session, event.user_id, get_random_id(),
-                                 message='Такой группы нет, попробуй еще раз.')
-                response = 'Продолжить'
-                keyboard = menu(response)
-
-            elif response == 'расписание':
-                send_message(vk_session, event.user_id, get_random_id(), message='Выбери возможность',
-                             keyboard=keyboard)
-
-            elif re.search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', response):
-                try:
-                    schedule_menu(response, vk_session, event.user_id, get_random_id())
-                except KeyError:
-                    send_message(vk_session, event.user_id, get_random_id(),
-                                 message='Вы не ввели группу.\n Формат ввода: ИКБО-09-19')
-                response = 'Продолжить'
-                keyboard = menu(response)
-
+        elif re.search(r'([а-я]{2}бо-\d{2}-\d{2})', response):
+            if response.upper() in schedules["groups"]:
+                users[str(event.user_id)] = response.upper()
+                json.dump(users, open("local_files/users_cache.json", "w"))
+                bot.send_message(vk_session, event.user_id, get_random_id(),
+                             message='Группа сохранена! Номер твоей группы: ' + users[str(event.user_id)])
             else:
-                send_message(vk_session, event.user_id, get_random_id(), message='Я не знаю такой команды')
-                response = 'Продолжить'
-                keyboard = menu(response)
+                bot.send_message(vk_session, event.user_id, get_random_id(),
+                             message='Такой группы нет, попробуй еще раз.')
+            response = 'Продолжить'
+            keyboard = bot.menu(response)
 
-            if response == 'Продолжить':
-                send_message(vk_session, event.user_id, get_random_id(), message='Что хочешь посмотреть?',
-                             keyboard=keyboard)
+        elif response == 'расписание':
+            bot.send_message(vk_session, event.user_id, get_random_id(), message='Выбери возможность',
+                         keyboard=keyboard)
 
+        elif re.search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', response):
+            try:
+                bot.schedule_menu(response, vk_session, event.user_id, get_random_id(), schedules, users)
+            except KeyError:
+                bot.send_message(vk_session, event.user_id, get_random_id(),
+                             message='Вы не ввели группу.\n Формат ввода: ИКБО-09-19')
+            response = 'Продолжить'
+            keyboard = bot.menu(response)
 
-if __name__ == '__main__':
-    main()
+        else:
+            bot.send_message(vk_session, event.user_id, get_random_id(), message='Я не знаю такой команды')
+            response = 'Продолжить'
+            keyboard = bot.menu(response)
+
+        if response == 'Продолжить':
+            bot.send_message(vk_session, event.user_id, get_random_id(), message='Что хочешь посмотреть?',
+                         keyboard=keyboard)

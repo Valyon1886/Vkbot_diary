@@ -1,4 +1,5 @@
 import re
+from os import chdir
 
 from vk_api import VkApi
 from vk_api.longpoll import VkLongPoll, VkEventType
@@ -17,7 +18,7 @@ from VkBotFunctions import VkBotFunctions
 #  Добавление своих пунктов в расписание (см таблицу)
 #  Вывод расписания из бд (на сегодня/на неделю)
 #  Обновление расписания в бд (с сохранением записей пользователя) !!!!!!!!!!!!!!!!!
-#  Случайный мем
+#  Случайный мем - работает с помощью обычного пользователя | надо доделать!
 #  Почистить код
 #  Сделать конф файл - сделан конфиг для токена, но думаю туда ещё надо будет добавить другие параметры
 #  Переписать по классам
@@ -27,6 +28,13 @@ def main():
     parser = Parser()
     schedule = parser.get_schedules()
     vk_session = VkApi(token=config.get_token())
+    vk_session_user = None
+    if config.get_user_info():
+        chdir(config.get_dir_name())
+        login, password = config.get_user_info()
+        vk_session_user = VkApi(login, password)
+        vk_session_user.auth()
+        chdir("..")
     print("Бот залогинился!")
     vk = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
@@ -34,7 +42,7 @@ def main():
 
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
-            bot = VkBotFunctions(vk_session, event.user_id)
+            bot = VkBotFunctions(vk_session, event.user_id, vk_session_user)
             response = event.text.lower()
             keyboard = bot.create_menu(response)
 
@@ -64,6 +72,11 @@ def main():
                     bot.schedule_menu(response, schedule, config.users_dict)
                 except KeyError:
                     bot.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-09-19')
+                response = 'Продолжить'
+                keyboard = bot.create_menu(response)
+
+            elif response == 'случайный мем':
+                bot.send_meme()
                 response = 'Продолжить'
                 keyboard = bot.create_menu(response)
 

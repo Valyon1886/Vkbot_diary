@@ -24,11 +24,15 @@ class Config:
             with open(file=Path(self._dir_name + '/' + self._users), mode="r", encoding="utf-8") as users_file:
                 self.users_dict = load(users_file)
 
+    def get_dir_name(self):
+        return self._dir_name
+
     def _set_up_config(self):
         print(f"Файл '{self._config_name}' не найден! Настраиваем новый!")
         self._set_token()
+        self._set_user_info()
 
-        with open(file=self._config_name, mode="w", encoding="utf-8") as config_file:
+        with open(file=Path(self._dir_name + '/' + self._config_name), mode="w", encoding="utf-8") as config_file:
             dump(self._config_dict, config_file, indent=2)
         print("Файл настроек сохранён!")
 
@@ -37,6 +41,20 @@ class Config:
 
     def get_token(self):
         return self._config_dict["token"]
+
+    def _set_user_info(self):
+        if 'y' == input("Вы хотите использовать команду 'случайный мем'? (нужен логин и пароль пользователя) Y/n").lower():
+            self._config_dict["user_login"] = input("Введите логин пользователя: ")
+            self._config_dict["user_password"] = input("Введите пароль пользователя: ")
+        else:
+            self._config_dict["user_login"] = None
+            self._config_dict["user_password"] = None
+
+    def get_user_info(self):
+        if self._config_dict.get("user_login", None) and self._config_dict.get("user_password", None):
+            return self._config_dict.get("user_login", None), self._config_dict.get("user_password", None)
+        else:
+            return None
 
     def save_users_dict(self):
         with open(file=Path(self._dir_name + '/' + self._users), mode="w", encoding="utf-8") as users_file:

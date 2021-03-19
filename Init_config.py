@@ -43,7 +43,8 @@ class Config:
         return self._config_dict["token"]
 
     def _set_user_info(self):
-        if 'y' == input("Вы хотите использовать команду 'случайный мем'? (нужен логин и пароль пользователя) Y/n").lower():
+        if 'y' == input("Вы хотите использовать команду 'случайный мем'? (нужен логин и пароль пользователя) Y/n")\
+                .lower():
             self._config_dict["user_login"] = input("Введите логин пользователя: ")
             self._config_dict["user_password"] = input("Введите пароль пользователя: ")
         else:

@@ -1,32 +1,12 @@
 from datetime import datetime
-from random import randint, choice
-from requests import get as req_get
-import io
 
-from vk_api import VkUpload
-from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 
 class VkBotFunctions:
-    def __init__(self, vk_session, user_id, vk_session_user):
+    def __init__(self, user_id):
         self._week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
-        self._vk_session = vk_session
         self._user_id = user_id
-        self._vk_session_user = vk_session_user
-
-    def send_message(self, message=None, keyboard=None):
-        self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
-                                                  'random_id': get_random_id(), 'keyboard': keyboard})
-
-    def send_pic(self, image_url, message=None):
-        arr = io.BytesIO(req_get(image_url).content)
-        arr.seek(0)
-        upload = VkUpload(self._vk_session)
-        photo = upload.photo_messages(arr)
-        image = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
-        self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
-                                                  'random_id': get_random_id(), "attachment": image})
 
     @staticmethod
     def create_menu(response):
@@ -59,9 +39,9 @@ class VkBotFunctions:
                 week_day = self._week_days[week_day]
                 student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence = self._make_schedule(week_day, student_group)
-                self.send_message(message='Расписание на сегодня:\n' + week_day + '\n' + full_sentence)
+                return 'Расписание на сегодня:\n' + week_day + '\n' + full_sentence
             else:
-                self.send_message(message='Выходной')
+                return 'Выходной'
         if response == "на завтра":
             week_day = datetime.now().isoweekday()
             if week_day == 7:
@@ -70,27 +50,27 @@ class VkBotFunctions:
                 week_day = self._week_days[week_day]
                 student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence = self._make_schedule(week_day, student_group)
-                self.send_message(message='Расписание на завтра:\n' + week_day + '\n' + full_sentence)
+                return 'Расписание на завтра:\n' + week_day + '\n' + full_sentence
             else:
-                self.send_message(message='Выходной')
+                return 'Выходной'
         if response == "на эту неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
                 student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group) + '\n\n'
-            self.send_message(message='Расписание на эту неделю: ' + full_sentence)
+            return 'Расписание на эту неделю: ' + full_sentence
         if response == "на следующую неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
                 student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group, 1) + '\n\n'
-            self.send_message(message='Расписание на следующую неделю: ' + full_sentence)
+            return 'Расписание на следующую неделю: ' + full_sentence
         if response == "какая неделя?":
-            self.send_message(message='Сейчас ' + str(self._get_number_week(datetime.now())) + ' неделя.')
+            return 'Сейчас ' + str(self._get_number_week(datetime.now())) + ' неделя.'
         if response == "какая группа?":
-            self.send_message(message='Твоя группа ' + users[str(self._user_id)])
+            return 'Твоя группа ' + users[str(self._user_id)]
 
     def _make_schedule(self, week_day, student_group, next_week=0):
         schedules_group = student_group[week_day]
@@ -117,55 +97,3 @@ class VkBotFunctions:
         number = current_week - first_week + 1
         return number
 
-    def send_meme(self):
-        if self._vk_session_user is None:
-            self.send_pic("http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
-                          "Ошибка vk:  Не введён логин и пароль пользователя")
-            return
-        if bool(randint(0, 3)):
-            _300_answers = [
-                'Ну, держи!',
-                'Ah, shit, here we go again.',
-                'Ты сам напросился...',
-                'Не следовало тебе меня спрашивать...',
-                'Ха-ха-ха-ха.... Извини',
-                '( ͡° ͜ʖ ͡°)',
-                'Ну что, пацаны, аниме?',
-                'Ну чё, народ, погнали, на*уй! Ё***ный в рот!'
-            ]
-            _300_communities = [
-                -45045130,  # - Хрень, какой-то паблик
-                -45523862,  # - Томат
-                -67580761,  # - КБ
-                -57846937,  # - MDK
-                -12382740,  # - ЁП
-                -45745333,  # - 4ch
-                -76628628,  # - Silvername
-            ]
-            own_id = choice(_300_communities)
-            try:
-                # Тырим с вк фотки)
-                vk_session = self._vk_session_user
-                vk = vk_session.get_api()
-                photos_count = vk.photos.get(owner_id=own_id, album_id="wall", count=1).get('count')
-                photo_sizes = vk.photos.get(owner_id=own_id,
-                                            album_id="wall",
-                                            count=1,
-                                            offset=randint(0, photos_count) - 1).get('items')[0].get('sizes')
-                max_photo_height = 0
-                photo_url = ""
-                for i in photo_sizes:
-                    if i.get('height') > max_photo_height:
-                        max_photo_height = i.get('height')
-                for i in photo_sizes:
-                    if i.get('height') == max_photo_height:
-                        photo_url = i.get('url')
-                        break
-
-                self.send_pic(photo_url, choice(_300_answers))
-            except BaseException:
-                self.send_pic(
-                    "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
-                    "Ошибка vk:  Что-то пошло не так")
-        else:
-            self.send_message("Я бы мог рассказать что-то, но мне лень. ( ͡° ͜ʖ ͡°)")

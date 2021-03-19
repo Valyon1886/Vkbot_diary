@@ -1,21 +1,34 @@
-
-USE test;
-
-CREATE TABLE users2(
-    Group1 int,
-    Data1 int,
-    week_2 int,
-    day_of_week_id int,
+CREATE DATABASE STORAGE;
+use STORAGE;
+CREATE TABLE Week(
+    idWeek int,
+    Even bool,
+    day_id int
 );
-CREATE table day_of_week(
-		id int,
-		Subject1 string, //node??
-		Class_number String,
-		Teacher string,
-        Time1 time,
-        link String,
-        Node id
-    );
-//INSERT INTO users (firstname, age) VALUES ('Tom', 34);
 
-//SELECT * FROM users;
+CREATE table Days(
+	day_id int,
+	Day_of_week LINESTRING,
+	id_Schedule int
+);
+
+CREATE TABLE Schedule(
+    id_Schedule int,
+    Time_lesson time,
+    Subject LINESTRING,
+    Teacher LINESTRING,
+    class_number LINESTRING,
+	link LINESTRING
+);
+
+CREATE table Users(
+	user_id LINESTRING,
+	Group LINESTRING
+);
+
+CREATE table Users_notes(
+	user_id int,
+	Data datetime,
+	Time_lesson time,
+	Note LINESTRING
+);

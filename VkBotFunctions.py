@@ -1,7 +1,7 @@
 from datetime import datetime
 from random import randint, choice
 from requests import get as req_get
-from os import remove
+import io
 
 from vk_api import VkUpload
 from vk_api.utils import get_random_id
@@ -20,16 +20,13 @@ class VkBotFunctions:
                                                   'random_id': get_random_id(), 'keyboard': keyboard})
 
     def send_pic(self, image_url, message=None):
-        image_str = image_url.split("/")[-1].split("?")[0] \
-            if '?' in image_url.split("/")[-1] \
-            else image_url.split("/")[-1]
-        open(image_str, "wb").write(req_get(image_url).content)
+        arr = io.BytesIO(req_get(image_url).content)
+        arr.seek(0)
         upload = VkUpload(self._vk_session)
-        photo = upload.photo_messages(image_str)
+        photo = upload.photo_messages(arr)
         image = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
         self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
                                                   'random_id': get_random_id(), "attachment": image})
-        remove(image_str)
 
     @staticmethod
     def create_menu(response):

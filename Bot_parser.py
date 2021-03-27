@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 
 
 class Parser:
+    """Класс Parser используется для получения расписания с сайта МИРЭА"""
     _dir_name = "local_files"
 
     def __init__(self):
@@ -21,6 +22,7 @@ class Parser:
         self._schedule()
 
     def _schedule(self):
+        """Скачивает актуальное расписание с сайта МИРЭА"""
         page = get("https://www.mirea.ru/schedule/")
         soup = BeautifulSoup(page.text, "html.parser")
         result = soup.find("div", {"class": "rasspisanie"}). \
@@ -30,7 +32,7 @@ class Parser:
             findAll("a", {"class": "uk-link-toggle"})
         for x in result:
             for i in range(1, 5):
-                if f"{i}к" in x["href"] and "зач" not in x["href"] and "экз" not in x["href"]:
+                if f"{i}к" in x["href"] and "зач" not in x["href"] and "Экз" not in x["href"]:
                     if x["href"] != self._schedules["link"][i - 1]:
                         file_xlsx = get(x["href"])
                         with open(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"), "wb") as f:
@@ -40,6 +42,7 @@ class Parser:
         dump(self._schedules, open(Path(self._dir_name + "/schedules_cache.json"), "w"))
 
     def _parse_table(self, table):
+        """Обработка скачанного расписания"""
         groups = {}
         groups_list = []
         groups_list_all = []
@@ -48,7 +51,7 @@ class Parser:
         num_cols = sheet.ncols
         for col_index in range(num_cols):
             group_cell = str(sheet.cell(1, col_index).value)
-            reg = search(r'.{2}БО-\d{2}-1\d', group_cell)
+            reg = search(r'.{4}-\d{2}-\d{2}', group_cell)
             if reg:
                 groups_list_all.append(reg.string)
                 groups_list.append(reg.string)
@@ -73,4 +76,5 @@ class Parser:
         dump(self._schedules, open(Path(self._dir_name + "/schedules_cache.json"), "w"))
 
     def get_schedules(self):
+        """Получение расписания"""
         return self._schedules

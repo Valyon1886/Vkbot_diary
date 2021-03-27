@@ -3,10 +3,11 @@ import io
 from re import search
 from random import randint, choice
 
-from vk_api import VkUpload
+from vk_api import VkUpload, VkApi
 from vk_api.utils import get_random_id
 
 from VkBotFunctions import VkBotFunctions
+from vk_api.keyboard import VkKeyboard
 
 
 class VkBotChat:
@@ -16,7 +17,7 @@ class VkBotChat:
     ----------
     vk_session : VkApi
         авторизованное сообщество
-    user_id : VkApi
+    user_id : int
         id пользователя
     vk_session_user : VkApi
         пользователь для отправки мемов
@@ -91,9 +92,9 @@ class VkBotChat:
 
         Parameters
         ----------
-        message : str, optional
+        message : str
             сообщение для пользователя (по умолчанию None)
-        keyboard : dict, optional
+        keyboard : VkKeyboard
             клавиатура доступная пользователю (по умолчанию None)
         """
         self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
@@ -104,7 +105,7 @@ class VkBotChat:
 
         Parameters
         ----------
-        message : str, optional
+        message : str
             сообщение для пользователя (по умолчанию None)
         image_url : str
             ссылка на изображение

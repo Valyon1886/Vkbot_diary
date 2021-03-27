@@ -1,10 +1,10 @@
-import re
+from re import search
 from json import dump, load
 from os.path import exists
 from pathlib import Path
 
-import xlrd
-import requests
+from xlrd import open_workbook
+from requests import get
 from bs4 import BeautifulSoup
 
 
@@ -21,7 +21,7 @@ class Parser:
         self._schedule()
 
     def _schedule(self):
-        page = requests.get("https://www.mirea.ru/schedule/")
+        page = get("https://www.mirea.ru/schedule/")
         soup = BeautifulSoup(page.text, "html.parser")
         result = soup.find("div", {"class": "rasspisanie"}). \
             find(string="Институт информационных технологий"). \
@@ -32,9 +32,9 @@ class Parser:
             for i in range(1, 5):
                 if f"{i}к" in x["href"] and "зач" not in x["href"] and "экз" not in x["href"]:
                     if x["href"] != self._schedules["link"][i - 1]:
-                        filexlsx = requests.get(x["href"])
+                        file_xlsx = get(x["href"])
                         with open(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"), "wb") as f:
-                            f.write(filexlsx.content)
+                            f.write(file_xlsx.content)
                         self._parse_table(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"))
                         self._schedules["link"][i - 1] = x["href"]
         dump(self._schedules, open(Path(self._dir_name + "/schedules_cache.json"), "w"))
@@ -43,12 +43,12 @@ class Parser:
         groups = {}
         groups_list = []
         groups_list_all = []
-        book = xlrd.open_workbook(table)
+        book = open_workbook(table)
         sheet = book.sheet_by_index(0)
         num_cols = sheet.ncols
         for col_index in range(num_cols):
             group_cell = str(sheet.cell(1, col_index).value)
-            reg = re.search(r'.{2}БО-\d{2}-1\d', group_cell)
+            reg = search(r'.{2}БО-\d{2}-1\d', group_cell)
             if reg:
                 groups_list_all.append(reg.string)
                 groups_list.append(reg.string)

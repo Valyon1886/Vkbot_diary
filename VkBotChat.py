@@ -10,6 +10,29 @@ from VkBotFunctions import VkBotFunctions
 
 
 class VkBotChat:
+    """ Класс VkBotChat используется для обработки и отправки сообщений в вк
+
+    Parameters
+    ----------
+    vk_session : VkApi
+        авторизованное сообщество
+    user_id : VkApi
+        id пользователя
+    vk_session_user : VkApi
+        пользователь для отправки мемов
+
+    Methods
+    -------
+    get_response(user_message, schedule, config)
+        Анализирует сообщение пользователя
+    send_message(message=None, keyboard=None)
+        Отправляет пользователю сообщение
+    send_pic(image_url, message=None)
+        Отправляет пользователю сообщение с картинкой
+    send_meme()
+        Отправляет пользователю мем
+    """
+
     def __init__(self, vk_session, user_id, vk_session_user):
         self._vk_session = vk_session
         self._user_id = user_id
@@ -18,6 +41,17 @@ class VkBotChat:
         self._flag = True
     
     def get_response(self, user_message, schedule, config):
+        """Анализирует запрос пользователя и отвечает на него
+
+        Parameters
+        ----------
+        user_message : str
+            сообщение пользователя
+        schedule : dict
+            расписание
+        config : Config
+            конфиг для работы с файлами
+        """
         if user_message == 'начать':
             self.send_message(message='Привет, чтобы открыть все возможности бота напиши свою группу'
                                       '\nФорма записи группы: ИКБО-03-19')
@@ -53,10 +87,28 @@ class VkBotChat:
             self.send_message(message='Что хочешь посмотреть?', keyboard=keyboard)
 
     def send_message(self, message=None, keyboard=None):
+        """Анализирует запрос пользователя и отвечает на него
+
+        Parameters
+        ----------
+        message : str, optional
+            сообщение для пользователя (по умолчанию None)
+        keyboard : dict, optional
+            клавиатура доступная пользователю (по умолчанию None)
+        """
         self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
                                                   'random_id': get_random_id(), 'keyboard': keyboard})
 
     def send_pic(self, image_url, message=None):
+        """Анализирует запрос пользователя и отвечает на него
+
+        Parameters
+        ----------
+        message : str, optional
+            сообщение для пользователя (по умолчанию None)
+        image_url : str
+            ссылка на изображение
+        """
         arr = io.BytesIO(req_get(image_url).content)
         arr.seek(0)
         upload = VkUpload(self._vk_session)
@@ -66,6 +118,7 @@ class VkBotChat:
                                                   'random_id': get_random_id(), "attachment": image})
 
     def send_meme(self):
+        """Отправляет пользователю случайный мем"""
         if self._vk_session_user is None:
             self.send_pic("http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
                           "Ошибка vk:  Не введён логин и пароль пользователя")

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='Vkbot_diary',
-    version='1.0',
+    version='1.0.0',
     description='Useful bot for VK',
     author='Valyon, Andrew, Sergey',
     author_email='astyn37@gmail.com',

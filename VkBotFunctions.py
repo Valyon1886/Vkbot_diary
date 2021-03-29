@@ -4,7 +4,7 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 
 class VkBotFunctions:
-    """ Основные функции бота
+    """Основные функции бота.
 
     Parameters
     ----------
@@ -18,13 +18,14 @@ class VkBotFunctions:
     schedule_menu(message=None, keyboard=None)
         Обработка вывода расписания
     """
+
     def __init__(self, user_id):
         self._week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
         self._user_id = user_id
 
     @staticmethod
     def create_menu(user_message):
-        """Создание клавиатуры на основе запроса пользователя
+        """Создание клавиатуры на основе запроса пользователя.
 
         :param user_message: сообщение пользователя
         :type user_message: str
@@ -54,7 +55,7 @@ class VkBotFunctions:
         return keyboard
 
     def schedule_menu(self, user_message, schedules, users):
-        """ Обрабатывает запрос пользователя и выдает ответ
+        """Обрабатывает запрос пользователя и выдает ответ.
 
         Parameters
         ----------
@@ -109,7 +110,7 @@ class VkBotFunctions:
             return 'Твоя группа ' + users[str(self._user_id)]
 
     def _make_schedule(self, week_day, student_group, next_week=0):
-        """ Преобразует часть расписание в сообщение для пользователя
+        """Преобразует часть расписание в сообщение для пользователя.
 
         Parameters
         ----------
@@ -143,7 +144,7 @@ class VkBotFunctions:
 
     @staticmethod
     def _get_number_week(day_today: datetime):
-        """Получение номера недели"""
+        """Получение номера недели."""
         first_week = datetime(2021, 2, 10).isocalendar()[1]
         current_week = day_today.isocalendar()[1]
         number = current_week - first_week + 1

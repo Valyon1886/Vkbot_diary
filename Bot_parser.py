@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 
 class Parser:
-    """Класс Parser используется для получения расписания с сайта МИРЭА"""
+    """Класс Parser используется для получения расписания с сайта МИРЭА."""
     _dir_name = "local_files"
 
     def __init__(self):
@@ -22,7 +22,7 @@ class Parser:
         self._schedule()
 
     def _schedule(self):
-        """Скачивает актуальное расписание с сайта МИРЭА"""
+        """Скачивает актуальное расписание с сайта МИРЭА."""
         page = get("https://www.mirea.ru/schedule/")
         soup = BeautifulSoup(page.text, "html.parser")
         result = soup.find("div", {"class": "rasspisanie"}). \
@@ -42,7 +42,7 @@ class Parser:
         dump(self._schedules, open(Path(self._dir_name + "/schedules_cache.json"), "w"))
 
     def _parse_table(self, table):
-        """Обработка скачанного расписания"""
+        """Обработка скачанного расписания."""
         groups = {}
         groups_list = []
         groups_list_all = []
@@ -76,5 +76,5 @@ class Parser:
         dump(self._schedules, open(Path(self._dir_name + "/schedules_cache.json"), "w"))
 
     def get_schedules(self):
-        """Получение расписания"""
+        """Получение расписания."""
         return self._schedules

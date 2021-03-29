@@ -11,7 +11,7 @@ from vk_api.keyboard import VkKeyboard
 
 
 class VkBotChat:
-    """ Класс VkBotChat используется для обработки и отправки сообщений в вк
+    """Класс VkBotChat используется для обработки и отправки сообщений в вк.
 
     Parameters
     ----------
@@ -42,7 +42,7 @@ class VkBotChat:
         self._flag = True
     
     def get_response(self, user_message, schedule, config):
-        """Анализирует запрос пользователя и отвечает на него
+        """Анализирует запрос пользователя и отвечает на него.
 
         Parameters
         ----------
@@ -88,7 +88,7 @@ class VkBotChat:
             self.send_message(message='Что хочешь посмотреть?', keyboard=keyboard)
 
     def send_message(self, message=None, keyboard=None):
-        """Анализирует запрос пользователя и отвечает на него
+        """Анализирует запрос пользователя и отвечает на него.
 
         Parameters
         ----------
@@ -101,7 +101,7 @@ class VkBotChat:
                                                   'random_id': get_random_id(), 'keyboard': keyboard})
 
     def send_pic(self, image_url, message=None):
-        """Анализирует запрос пользователя и отвечает на него
+        """Анализирует запрос пользователя и отвечает на него.
 
         Parameters
         ----------
@@ -119,7 +119,7 @@ class VkBotChat:
                                                   'random_id': get_random_id(), "attachment": image})
 
     def send_meme(self):
-        """Отправляет пользователю случайный мем"""
+        """Отправляет пользователю случайный мем."""
         if self._vk_session_user is None:
             self.send_pic("http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
                           "Ошибка vk:  Не введён логин и пароль пользователя")

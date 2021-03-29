@@ -21,17 +21,6 @@ class VkBotChat:
         id пользователя
     vk_session_user : VkApi
         пользователь для отправки мемов
-
-    Methods
-    -------
-    get_response(user_message, schedule, config)
-        Анализирует сообщение пользователя
-    send_message(message=None, keyboard=None)
-        Отправляет пользователю сообщение
-    send_pic(image_url, message=None)
-        Отправляет пользователю сообщение с картинкой
-    send_meme()
-        Отправляет пользователю мем
     """
 
     def __init__(self, vk_session, user_id, vk_session_user):

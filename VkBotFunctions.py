@@ -10,13 +10,6 @@ class VkBotFunctions:
     ----------
     user_id : int
         id пользователя
-
-    Methods
-    -------
-    create_menu(response)
-        Создается клавиатура
-    schedule_menu(message=None, keyboard=None)
-        Обработка вывода расписания
     """
 
     def __init__(self, user_id):

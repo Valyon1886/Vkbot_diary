@@ -3,8 +3,8 @@ from os import chdir
 from vk_api import VkApi
 from vk_api.longpoll import VkLongPoll, VkEventType
 
-from Init_config import Config
-from Bot_parser import Parser
+from InitConfig import Config
+from BotParser import Parser
 from VkBotChat import VkBotChat
 
 
@@ -22,6 +22,7 @@ from VkBotChat import VkBotChat
 #  Сделать конф файл - сделан конфиг для токена, но думаю туда ещё надо будет добавить другие параметры
 
 def main():
+    """Функция запуска бота и прослушивание им сообщений от пользователя"""
     config = Config()
     parser = Parser()
     schedule = parser.get_schedules()

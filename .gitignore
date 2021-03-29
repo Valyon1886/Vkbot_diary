@@ -232,3 +232,4 @@ dmypy.json
 
 # Others
 local_files/*
+docs/build/*

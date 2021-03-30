@@ -6,6 +6,9 @@ Vkbot_diary
 
    BotParser
    InitConfig
+   InitDatabase
+   InitSQL
+   MySQLStorage
    VkBotChat
    VkBotDiary
    VkBotFunctions

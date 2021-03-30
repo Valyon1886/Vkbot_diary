@@ -6,6 +6,9 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from InitConfig import Config
 from BotParser import Parser
 from VkBotChat import VkBotChat
+from InitSQL import InitSQL
+from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes
+from InitDatabase import InitDatabase
 
 
 # TODO:
@@ -21,9 +24,19 @@ from VkBotChat import VkBotChat
 #  Почистить код
 #  Сделать конф файл - сделан конфиг для токена, но думаю туда ещё надо будет добавить другие параметры
 
+def ensure_tables_created():
+    """Проверка, что таблицы созданы"""
+    InitSQL.get_DB().create_tables([Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes])
+
+
 def main():
     """Функция запуска бота и прослушивание им сообщений от пользователя"""
     config = Config()
+    print("Файл настроек загружен!")
+    ensure_tables_created()
+    print("Соединение с базой данных установлено!")
+    if config.get_init_database():
+        InitDatabase.ensure_start_data_added()
     parser = Parser()
     schedule = parser.get_schedules()
     vk_session = VkApi(token=config.get_token())

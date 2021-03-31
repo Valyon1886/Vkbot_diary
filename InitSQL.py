@@ -1,5 +1,6 @@
 from os.path import basename
 from os import getcwd
+from sys import exit
 
 from peewee import *
 
@@ -21,7 +22,10 @@ class InitSQL:
     def _init_DB():
         """Инициализация соединения с базой данных и сохранение экземпляра"""
         database_config = Config().get_database_info()
+        tries = 0
+        total_tries = 3
         while True:
+            tries += 1
             try:
                 myDB = MySQLDatabase(host=database_config.get("host"),
                                      port=3306,
@@ -40,6 +44,9 @@ class InitSQL:
                     conn.cursor().execute(f'CREATE DATABASE {database_config.get("database")}')
                     conn.close()
                 else:
-                    print(", ".join([str(x) for x in Argument.args]))
-                    raise ValueError("Wrong database info!")
+                    message = "Ошибка " + ", ".join([str(x) for x in Argument.args])
+                    if tries == total_tries:
+                        exit(message)
+                    else:
+                        print(message + f"\nОсталось попыток - {total_tries - tries}")
         return myDB

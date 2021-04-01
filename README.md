@@ -31,7 +31,8 @@ ____________
 * [Beautiful Soup 4](https://www.crummy.com/software/BeautifulSoup/) - библиотека для парсинга html страниц
 * [PyMySQL](https://github.com/PyMySQL/PyMySQL) - библиотека, содержащая клиент для базы MySQL
 * [cryptography](https://github.com/pyca/cryptography) - библиотека, для шифрования пароля при установлении соединения с базой данных
-* [peewee](https://github.com/pyinstaller/pyinstaller) - библиотека для работы с базой данных через удобные классы (ORM)
+* [peewee](https://github.com/coleifer/peewee) - библиотека для работы с базой данных через удобные классы (ORM)
+* [pyinstaller](https://github.com/pyinstaller/pyinstaller) - библиотека для сборки проекта в исполняемый файл
 
 ## Установка зависимостей
 Надо выполнить команду ниже в командной строке или терминале, находясь в корневой папке проекта.

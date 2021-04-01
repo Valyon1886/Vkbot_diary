@@ -17,7 +17,7 @@ class InitDatabase:
             {'user_id': 286251203, 'group': "ИКБО-06-19"},
             {'user_id': 248941603, 'group': "ИКБО-20-19"}
         ]
-        if len([i for i in Users.select().limit(1)]) == 0:
+        if len([i for i in Users.select().limit(1).execute()]) == 0:
             Users.insert_many(users_data).execute()
             print("Тестовые значения добавлены в таблицу 'Users'!")
 

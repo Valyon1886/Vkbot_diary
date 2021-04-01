@@ -55,11 +55,32 @@ class Users(BaseModel):
 class Users_notes(BaseModel):
     """Таблица заметок для каждого пользователя на выбранные даты"""
     user_id = IntegerField(column_name='UserId')
-    data = DateTimeField(column_name='Data')
-    note = TextField(column_name='Note')
+    start_date = DateTimeField(column_name='StartDate')
+    end_date = DateTimeField(column_name='EndDate')
+    note = TextField(column_name='Note', null=True)
+    task = TextField(column_name='Task', null=True)
 
     class Meta:
         table_name = 'Users_notes'
+
+
+class Lesson_start_end(BaseModel):
+    """Таблица времени начала и конца пар"""
+    lesson_number = IntegerField(column_name='LessonNumber')
+    start_time = TimeField(column_name='StartTime')
+    end_time = TimeField(column_name='EndTime')
+
+    class Meta:
+        table_name = 'Lesson_start_end'
+
+
+class Users_communities(BaseModel):
+    """Таблица выбранных пользователем сообществ"""
+    user_id = IntegerField(column_name='UserId')
+    community_id = IntegerField(column_name='CommunityId')
+
+    class Meta:
+        table_name = 'Users_communities'
 
 
 '''

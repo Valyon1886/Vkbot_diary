@@ -3,18 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Vkbot diary's documentation!
-=======================================
+Добро пожаловать в документацию "Vkbot diary"!
+==============================================
 
 .. toctree::
    :maxdepth: 4
-   :caption: Contents:
+   :caption: Содержимое:
 
    modules
 
 
-Indices and tables
-==================
+Индексы и таблицы
+=================
 
 * :ref:`genindex`
 * :ref:`modindex`

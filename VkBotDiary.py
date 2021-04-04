@@ -9,6 +9,7 @@ from VkBotChat import VkBotChat
 from InitSQL import InitSQL
 from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes
 from InitDatabase import InitDatabase
+from SpeechRecognizer import SpeechRecognizer
 
 
 # TODO:
@@ -37,6 +38,7 @@ def main():
     if config.get_init_database():
         InitDatabase.ensure_start_data_added()
     parser = Parser()
+    sr = SpeechRecognizer()
     schedule = parser.get_schedules()
     vk_session = VkApi(token=config.get_token())
     vk_session_user = None
@@ -51,9 +53,13 @@ def main():
     print("Бот начал слушать сообщения!")
 
     for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and event.text and event.to_me:
-            bot = VkBotChat(vk_session, event.user_id, vk_session_user)
+        if event.type == VkEventType.MESSAGE_NEW and (event.text or "attach1_kind" in event.attachments) and event.to_me:
             user_message = event.text.lower()
+            if "attach1_kind" in event.attachments:
+                if event.attachments["attach1_kind"] == 'audiomsg':
+                    p = eval(event.attachments["attachments"])
+                    user_message = sr.get_phrase(p[0]['audio_message']['link_mp3']).lower()
+            bot = VkBotChat(vk_session, event.user_id, vk_session_user)
             bot.get_response(user_message, schedule, config)
 
 

@@ -72,7 +72,7 @@ class VkBotFunctions:
                 return 'Расписание на сегодня:\n' + week_day + '\n' + full_sentence
             else:
                 return 'Выходной'
-        if user_message == "на завтра":
+        elif user_message == "на завтра":
             week_day = datetime.now().isoweekday()
             if week_day == 7:
                 week_day = 0
@@ -83,24 +83,26 @@ class VkBotFunctions:
                 return 'Расписание на завтра:\n' + week_day + '\n' + full_sentence
             else:
                 return 'Выходной'
-        if user_message == "на эту неделю":
+        elif user_message == "на эту неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
                 student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group) + '\n\n'
             return 'Расписание на эту неделю: ' + full_sentence
-        if user_message == "на следующую неделю":
+        elif user_message == "на следующую неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
                 student_group = schedules["groups"][users[str(self._user_id)]]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group, 1) + '\n\n'
             return 'Расписание на следующую неделю: ' + full_sentence
-        if user_message == "какая неделя?":
+        elif user_message == "какая неделя?":
             return 'Сейчас ' + str(self._get_number_week(datetime.now())) + ' неделя.'
-        if user_message == "какая группа?":
+        elif user_message == "какая группа?":
             return 'Твоя группа ' + users[str(self._user_id)]
+        else:
+            return "Я не знаю такой команды"
 
     def _make_schedule(self, week_day, student_group, next_week=0):
         """Преобразует часть расписание в сообщение для пользователя.

@@ -9,7 +9,7 @@ Vkbot_diary
    InitDatabase
    InitSQL
    MySQLStorage
+   SpeechRecognizer
    VkBotChat
    VkBotDiary
    VkBotFunctions
-   setup

@@ -56,9 +56,9 @@ class VkBotChat:
                 self.send_message(message='Такой группы нет, попробуй еще раз.')
 
         elif user_message == 'расписание':
+            self._flag = False
             keyboard = self._functions.create_menu(user_message)
             self.send_message(message='Выбери возможность', keyboard=keyboard)
-            self._flag = False
 
         elif search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', user_message):
             try:

@@ -38,5 +38,8 @@ class SpeechRecognizer:
         harvard = sr.AudioFile(arr)
         with harvard as source:
             audio = r.record(source)
-        user_message = r.recognize_google(audio, language="ru-RU")
-        return user_message
+        try:
+            user_message = r.recognize_google(audio, language="ru-RU")
+            return user_message
+        except sr.UnknownValueError:
+            return 'пустое сообщение'

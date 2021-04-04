@@ -38,7 +38,6 @@ def main():
     if config.get_init_database():
         InitDatabase.ensure_start_data_added()
     parser = Parser()
-    sr = SpeechRecognizer()
     schedule = parser.get_schedules()
     vk_session = VkApi(token=config.get_token())
     vk_session_user = None
@@ -58,7 +57,7 @@ def main():
             if "attach1_kind" in event.attachments:
                 if event.attachments["attach1_kind"] == 'audiomsg':
                     p = eval(event.attachments["attachments"])
-                    user_message = sr.get_phrase(p[0]['audio_message']['link_mp3']).lower()
+                    user_message = SpeechRecognizer.get_phrase(p[0]['audio_message']['link_mp3']).lower()
             bot = VkBotChat(vk_session, event.user_id, vk_session_user)
             bot.get_response(user_message, schedule, config)
 

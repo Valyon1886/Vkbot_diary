@@ -21,25 +21,25 @@ class SpeechRecognizer:
                 преобразованная строка
         """
 
-        arr = BytesIO(req_get(url).content)
-        arr.seek(0)
+        input_file = BytesIO(req_get(url).content)
+        input_file.seek(0)
 
-        input_track_data = bytearray(arr.read())
+        input_track_data = bytearray(input_file.read())
 
         # using pipe:0 refers to the stdin, pipe:1 refers to stdout
         ffmpeg_process = Popen('ffmpeg -v fatal -hide_banner -i pipe:0 -f wav pipe:1', stdin=PIPE, stdout=PIPE)
 
         output_stream = ffmpeg_process.communicate(input_track_data)
 
-        arr = BytesIO(output_stream[0])
-        arr.seek(0)
+        output_file = BytesIO(output_stream[0])
+        output_file.seek(0)
 
-        r = sr.Recognizer()
-        harvard = sr.AudioFile(arr)
+        req = sr.Recognizer()
+        harvard = sr.AudioFile(output_file)
         with harvard as source:
-            audio = r.record(source)
+            audio = req.record(source)
         try:
-            user_message = r.recognize_google(audio, language="ru-RU")
+            user_message = req.recognize_google(audio, language="ru-RU")
             return user_message
         except sr.UnknownValueError:
             return 'пустое сообщение'

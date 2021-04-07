@@ -9,8 +9,6 @@ class Config:
     _dir_name = "local_files"
     _config_name = "config.json"
     _config_dict = {}
-    _users = "users_cache.json"
-    users_dict = {}
 
     def __init__(self):
         """Создаёт файл конфигурации (если нету) и загружает его в память."""
@@ -21,9 +19,6 @@ class Config:
                 self._config_dict = load(config_file)
         else:
             self._set_up_config()
-        if exists(Path(self._dir_name + '/' + self._users)):
-            with open(file=Path(self._dir_name + '/' + self._users), mode="r", encoding="utf-8") as users_file:
-                self.users_dict = load(users_file)
 
     def get_dir_name(self):
         """Возвращает имя директории, где хранятся конфигурационные файлы."""
@@ -97,8 +92,3 @@ class Config:
     def get_init_database(self):
         """Возвращает информацию о необходимости добавлений тестовых значений в базу данных"""
         return self._config_dict["init_database"]
-
-    def save_users_dict(self):
-        """Сохраняет словарь пользователей с их группами."""
-        with open(file=Path(self._dir_name + '/' + self._users), mode="w", encoding="utf-8") as users_file:
-            dump(self.users_dict, users_file)

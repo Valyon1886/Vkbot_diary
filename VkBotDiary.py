@@ -4,16 +4,16 @@ from vk_api import VkApi
 from vk_api.longpoll import VkLongPoll, VkEventType
 
 from InitConfig import Config
-from BotParser import Parser
+from VkBotParser import Parser
 from VkBotChat import VkBotChat
 from InitSQL import InitSQL
-from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes
+from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes, Lesson_start_end, \
+    Users_communities
 from InitDatabase import InitDatabase
 from SpeechRecognizer import SpeechRecognizer
 
 
 # TODO:
-#  Поддержка голосового ввода
 #  Загрузка расписания в бд (после этого можно будет добавлять заметки)
 #  1 Расписание 2. Пользователи/настройки 3. Заметки
 #  Добавление заметок (напротив предмета, см таблицу)
@@ -26,7 +26,8 @@ from SpeechRecognizer import SpeechRecognizer
 
 def ensure_tables_created():
     """Проверка, что таблицы созданы"""
-    InitSQL.get_DB().create_tables([Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes])
+    InitSQL.get_DB().create_tables(
+        [Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes, Lesson_start_end, Users_communities])
 
 
 def main():
@@ -52,14 +53,15 @@ def main():
     print("Бот начал слушать сообщения!")
 
     for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and (event.text or "attach1_kind" in event.attachments) and event.to_me:
+        if event.type == VkEventType.MESSAGE_NEW and (
+                event.text or "attach1_kind" in event.attachments) and event.to_me:
             user_message = event.text.lower()
             if "attach1_kind" in event.attachments:
                 if event.attachments["attach1_kind"] == 'audiomsg':
                     p = eval(event.attachments["attachments"])
                     user_message = SpeechRecognizer.get_phrase(p[0]['audio_message']['link_mp3']).lower()
             bot = VkBotChat(vk_session, event.user_id, vk_session_user)
-            bot.get_response(user_message, schedule, config)
+            bot.get_response(user_message, schedule)
 
 
 if __name__ == '__main__':

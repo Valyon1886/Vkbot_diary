@@ -1,6 +1,9 @@
 from datetime import datetime
+from random import randint, choice
 
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
+
+from MySQLStorage import Users_communities
 
 
 class VkBotFunctions:
@@ -11,6 +14,27 @@ class VkBotFunctions:
     user_id : int
         id пользователя
     """
+
+    _300_communities = [
+        45045130,  # - Хрень, какой-то паблик
+        45523862,  # - Томат
+        67580761,  # - КБ
+        57846937,  # - MDK
+        12382740,  # - ЁП
+        45745333,  # - 4ch
+        76628628,  # - Silvername
+    ]
+
+    _300_answers = [
+        'Ну, держи!',
+        'Ah, shit, here we go again.',
+        'Ты сам напросился...',
+        'Не следовало тебе меня спрашивать...',
+        'Ха-ха-ха-ха.... Извини',
+        '( ͡° ͜ʖ ͡°)',
+        'Ну что, пацаны, аниме?',
+        'Ну чё, народ, погнали, на*уй! Ё***ный в рот!'
+    ]
 
     def __init__(self, user_id):
         self._week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
@@ -29,7 +53,7 @@ class VkBotFunctions:
 
         if user_message == 'Продолжить':
             keyboard.add_button('Расписание', color=VkKeyboardColor.PRIMARY)
-            keyboard.add_button('Случайный мем')
+            keyboard.add_button('Мем')
             keyboard.add_line()
             keyboard.add_button('Добавить задачу', color=VkKeyboardColor.POSITIVE)
             keyboard.add_button('Изменить задачу', color=VkKeyboardColor.NEGATIVE)
@@ -44,10 +68,20 @@ class VkBotFunctions:
             keyboard.add_button('Какая неделя?')
             keyboard.add_button('Какая группа?')
 
+        if user_message == 'мем':
+            keyboard.add_button('Случайный мем', color=VkKeyboardColor.PRIMARY)
+            keyboard.add_button('Мои сообщества')
+            keyboard.add_line()
+            keyboard.add_button('Добавить сообщество(а)', color=VkKeyboardColor.POSITIVE)
+            keyboard.add_button('Удалить сообщество(а)', color=VkKeyboardColor.NEGATIVE)
+
+        if user_message == 'клавиатура--отмена':
+            keyboard.add_button('Отмена', color=VkKeyboardColor.NEGATIVE)
+
         keyboard = keyboard.get_keyboard()
         return keyboard
 
-    def schedule_menu(self, user_message, schedules, users):
+    def schedule_menu(self, user_message, schedules, group):
         """Обрабатывает запрос пользователя и выдает ответ.
 
         Parameters
@@ -56,8 +90,8 @@ class VkBotFunctions:
             сообщение пользователя
         schedules : dict
             расписание
-        users : dict
-            кэш пользователей
+        group : str
+            группа пользователя
         Return
         ----------
         full_sentence: str
@@ -67,7 +101,7 @@ class VkBotFunctions:
             week_day = datetime.now().isoweekday() - 1
             if week_day < 6:
                 week_day = self._week_days[week_day]
-                student_group = schedules["groups"][users[str(self._user_id)]]
+                student_group = schedules["groups"][group]
                 full_sentence = self._make_schedule(week_day, student_group)
                 return 'Расписание на сегодня:\n' + week_day + '\n' + full_sentence
             else:
@@ -78,7 +112,7 @@ class VkBotFunctions:
                 week_day = 0
             if week_day < 6:
                 week_day = self._week_days[week_day]
-                student_group = schedules["groups"][users[str(self._user_id)]]
+                student_group = schedules["groups"][group]
                 full_sentence = self._make_schedule(week_day, student_group)
                 return 'Расписание на завтра:\n' + week_day + '\n' + full_sentence
             else:
@@ -87,20 +121,20 @@ class VkBotFunctions:
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
-                student_group = schedules["groups"][users[str(self._user_id)]]
+                student_group = schedules["groups"][group]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group) + '\n\n'
             return 'Расписание на эту неделю: ' + full_sentence
         elif user_message == "на следующую неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
-                student_group = schedules["groups"][users[str(self._user_id)]]
+                student_group = schedules["groups"][group]
                 full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group, 1) + '\n\n'
             return 'Расписание на следующую неделю: ' + full_sentence
         elif user_message == "какая неделя?":
             return 'Сейчас ' + str(self._get_number_week(datetime.now())) + ' неделя.'
         elif user_message == "какая группа?":
-            return 'Твоя группа ' + users[str(self._user_id)]
+            return 'Твоя группа ' + group
         else:
             return "Я не знаю такой команды"
 
@@ -145,3 +179,69 @@ class VkBotFunctions:
         number = current_week - first_week + 1
         return number
 
+    def send_meme(self, vk_session_user):
+        """Отправляет пользователю случайный мем."""
+        if len([i for i in Users_communities.select()
+                .where(Users_communities.user_id == self._user_id).limit(1).execute()]) != 0:
+            communities = [i for i in
+                           Users_communities.select().where(Users_communities.user_id == self._user_id).execute()]
+            communities = [i.community_id for i in communities]
+            own_id = choice(communities)
+        else:
+            own_id = choice(self._300_communities)
+        # Тырим с вк фотки)
+        vk = vk_session_user.get_api()
+        photos_count = vk.photos.get(owner_id=-own_id, album_id="wall", count=1).get('count')
+        photo_sizes = vk.photos.get(owner_id=-own_id,
+                                    album_id="wall",
+                                    count=1,
+                                    offset=randint(0, photos_count) - 1).get('items')[0].get('sizes')
+        max_photo_height = 0
+        photo_url = ""
+        for i in photo_sizes:
+            if i.get('height') > max_photo_height:
+                max_photo_height = i.get('height')
+        for i in photo_sizes:
+            if i.get('height') == max_photo_height:
+                photo_url = i.get('url')
+                break
+
+        return photo_url, choice(self._300_answers)
+
+    def change_users_community(self, vk_session_user, need_delete: bool, communities_names):
+        """Добавляет или удаляет сообщества из таблицы"""
+        vk = vk_session_user.get_api()
+        communities = vk.groups.getById(group_ids=communities_names)  # get ids of groups
+        communities_ids = [int(i['id']) for i in communities]
+        for community_id in communities_ids:
+            if len([i for i in Users_communities.select()
+                    .where(Users_communities.user_id == self._user_id and
+                           Users_communities.community_id == community_id).limit(1).execute()]) != 0:
+                if need_delete:
+                    Users_communities.delete().where(Users_communities.user_id == self._user_id and
+                                                     Users_communities.community_id == community_id).execute()
+            else:
+                if not need_delete:
+                    Users_communities.create(user_id=self._user_id, community_id=community_id)
+        return need_delete
+
+    def show_users_communities(self, vk_session_user, show_name=False, show_url=False):
+        """Возвращает список сообществ из таблицы и стандартные это сообщества или собственные пользователя"""
+        communities = []
+        if len([i for i in Users_communities.select()
+                .where(Users_communities.user_id == self._user_id).limit(1).execute()]) != 0:
+            communities = [i for i in
+                           Users_communities.select().where(Users_communities.user_id == self._user_id).execute()]
+            communities = [i.community_id for i in communities]
+        vk = vk_session_user.get_api()
+        communities_list = []
+        if len(communities) > 0:
+            communities_list = vk.groups.getById(group_ids=communities)
+        else:
+            if not show_url:
+                communities_list = vk.groups.getById(group_ids=self._300_communities)
+        if show_name:
+            communities_list = [i['name'] for i in communities_list]
+        elif show_url and len(communities) > 0:
+            communities_list = ["https://vk.com/" + i['screen_name'] for i in communities_list]
+        return len(communities) > 0, communities_list

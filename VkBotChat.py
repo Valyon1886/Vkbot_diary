@@ -45,9 +45,9 @@ class VkBotChat:
         schedule : dict
             расписание
         """
-        if VkBotStatus.get_state() != States.NONE:
+        if VkBotStatus.get_state(self._user_id) != States.NONE:
             if user_message == 'отмена':
-                VkBotStatus.set_state(States.NONE)
+                VkBotStatus.set_state(self._user_id, States.NONE)
                 self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}...")
             else:
                 communities_links = [i.strip() for i in re_split(', | |\n', user_message)]
@@ -58,7 +58,7 @@ class VkBotChat:
                         communities_names.append(str(findall(r'(?:(?:https?|ftp|http?)://)?[\w/\-?=%.]+\.[\w/\-&?=%.]+',
                                                              i)[0]).split("/")[-1])
                 communities_numbers = []
-                if VkBotStatus.get_state() == States.DELETE_COMMUNITY and len(communities_names) == 0:
+                if VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY and len(communities_names) == 0:
                     for i in communities_links:
                         try:
                             if int(i) - 1 > 0:
@@ -80,9 +80,10 @@ class VkBotChat:
                 else:
                     try:
                         result = self._functions.change_users_community(self._vk_session_user,
-                                                                        VkBotStatus.get_state() == States.DELETE_COMMUNITY,
+                                                                        VkBotStatus.get_state(
+                                                                            self._user_id) == States.DELETE_COMMUNITY,
                                                                         communities_names)
-                        VkBotStatus.set_state(States.NONE)
+                        VkBotStatus.set_state(self._user_id, States.NONE)
                         if len(communities_names) == 1:
                             self.send_message(message=f"Сообщество {'удалено' if result else 'сохранено'}!")
                         else:
@@ -145,7 +146,7 @@ class VkBotChat:
 
             elif user_message == 'добавить сообщество(а)':
                 self._flag = False
-                VkBotStatus.set_state(States.ADD_COMMUNITY)
+                VkBotStatus.set_state(self._user_id, States.ADD_COMMUNITY)
                 keyboard = self._functions.create_menu("клавиатура--отмена")
                 self.send_message(message=f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)",
                                   keyboard=keyboard)
@@ -157,7 +158,7 @@ class VkBotChat:
                     bot_message = "\nТекущие сообщества:\n" + \
                                   "\n".join([f"{str(i + 1)}) {list_comm_urls[i]}" for i in range(len(list_comm_urls))])
                     self._flag = False
-                    VkBotStatus.set_state(States.DELETE_COMMUNITY)
+                    VkBotStatus.set_state(self._user_id, States.DELETE_COMMUNITY)
                     keyboard = self._functions.create_menu("клавиатура--отмена")
                     self.send_message(message=f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)" +
                                               bot_message,

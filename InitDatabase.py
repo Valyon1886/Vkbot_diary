@@ -4,11 +4,12 @@ from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_
 
 class InitDatabase:
     """Класс для добавления тестовых значений в базу данных"""
+
     @staticmethod
     def ensure_start_data_added():
         """Добавление тестовых значений в базу данных"""
         InitDatabase._ensure_users_added()
-        InitDatabase._ensure_notes_added()
+        InitDatabase._ensure_communities_added()
 
     @staticmethod
     def _ensure_users_added():
@@ -23,6 +24,14 @@ class InitDatabase:
             print("Тестовые значения добавлены в таблицу 'Users'!")
 
     @staticmethod
-    def _ensure_notes_added():
-        """Добавление тестовых значений в таблицу 'Users_notes'"""
-        pass
+    def _ensure_communities_added():
+        """Добавление тестовых значений в таблицу 'Users_communities'"""
+        users_communities = [
+            {'user_id': 92798890, 'community_id': 66678575},
+            {'user_id': 92798890, 'community_id': 198870105},
+            {'user_id': 283202201, 'community_id': 110713909},
+            {'user_id': 283202201, 'community_id': 80463597}
+        ]
+        if len([i for i in Users_communities.select().limit(1).execute()]) == 0:
+            Users_communities.insert_many(users_communities).execute()
+            print("Тестовые значения добавлены в таблицу 'Users_communities'!")

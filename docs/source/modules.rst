@@ -4,7 +4,6 @@ Vkbot_diary
 .. toctree::
    :maxdepth: 4
 
-   BotParser
    InitConfig
    InitDatabase
    InitSQL
@@ -13,3 +12,5 @@ Vkbot_diary
    VkBotChat
    VkBotDiary
    VkBotFunctions
+   VkBotParser
+   VkBotStatus

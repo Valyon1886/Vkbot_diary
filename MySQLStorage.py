@@ -12,8 +12,9 @@ class BaseModel(Model):
 class Schedule_of_subject(BaseModel):
     """Таблица информации о каждой паре"""
     schedule_id = AutoField(column_name='ScheduleId')
-    time_lesson = TimeField(column_name='TimeLesson')
+    lesson_number = TimeField(column_name='LessonNumber')
     subject_task = TextField(column_name='Subject/Task')
+    lesson_type = TextField(column_name='LessonType')
     teacher = TextField(column_name='Teacher')
     class_number = TextField(column_name='ClassNumber')
     link = TextField(column_name='Link')

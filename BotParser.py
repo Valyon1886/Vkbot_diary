@@ -32,7 +32,7 @@ class Parser:
             findAll("a", {"class": "uk-link-toggle"})
         for x in result:
             for i in range(1, 5):
-                if f"{i}к" in x["href"] and "зач" not in x["href"] and "Экз" not in x["href"]:
+                if f"{i}к" in x["href"].lower() and "зач" not in x["href"].lower() and "экз" not in x["href"].lower():
                     if x["href"] != self._schedules["link"][i - 1]:
                         file_xlsx = get(x["href"])
                         with open(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"), "wb") as f:
@@ -55,19 +55,21 @@ class Parser:
             if reg:
                 groups_list_all.append(reg.string)
                 groups_list.append(reg.string)
-                week = {"Понедельник": None, "Вторник": None, "Среда": None,
-                        "Четверг": None, "Пятница": None, "Суббота": None}
+                week = {str(i): None for i in self._week_days}
                 for k in range(6):
                     day = [[] for _ in range(6)]
                     for i in range(6):
                         for j in range(2):
-                            subject = sheet.cell(3 + j + i * 2 + k * 12, col_index).value
-                            lesson_type = sheet.cell(3 + j + i * 2 + k * 12, col_index + 1).value
-                            lecturer = sheet.cell(3 + j + i * 2 + k * 12, col_index + 2).value
-                            lecturer = str(lecturer).replace(",", ".")
-                            classroom = sheet.cell(3 + j + i * 2 + k * 12, col_index + 3).value
-                            url = sheet.cell(3 + j + i * 2 + k * 12, col_index + 4).value
-                            lesson = {"subject": subject, "lesson_type": lesson_type,
+                            lesson_number = int(sheet.cell(3 + i * 2 + k * 12, 1).value)
+                            subject = str(sheet.cell(3 + j + i * 2 + k * 12, col_index).value).strip().replace('\n', '')
+                            lesson_type = str(sheet.cell(3 + j + i * 2 + k * 12, col_index + 1).value)\
+                                .strip().replace('\n', '')
+                            lecturer = str(sheet.cell(3 + j + i * 2 + k * 12, col_index + 2).value)\
+                                .replace(",", ".").strip().replace('\n', '')
+                            classroom = str(sheet.cell(3 + j + i * 2 + k * 12, col_index + 3).value)\
+                                .strip().replace('\n', '')
+                            url = str(sheet.cell(3 + j + i * 2 + k * 12, col_index + 4).value).strip().replace('\n', '')
+                            lesson = {"lesson_number": lesson_number, "subject": subject, "lesson_type": lesson_type,
                                       "lecturer": lecturer, "classroom": classroom, "url": url}
                             day[i].append(lesson)
                     week[self._week_days[k]] = day

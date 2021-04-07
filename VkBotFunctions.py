@@ -125,9 +125,9 @@ class VkBotFunctions:
         full_sentence = ""
         for i in range(len(schedules_group)):
             if not schedules_group[i][chet_week]['subject']:
-                full_sentence = full_sentence + str(i + 1) + ') --\n'
+                full_sentence = full_sentence + str(schedules_group[i][chet_week]['lesson_number']) + ') --\n'
             else:
-                full_sentence = full_sentence + str(i + 1) + ') ' + \
+                full_sentence = full_sentence + str(schedules_group[i][chet_week]['lesson_number']) + ') ' + \
                                 schedules_group[i][chet_week]['subject'] + ' ' + \
                                 schedules_group[i][chet_week]['lesson_type'] + '.'
                 if schedules_group[i][chet_week]['lecturer']:

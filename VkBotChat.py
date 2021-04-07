@@ -1,5 +1,5 @@
 from requests import get as req_get
-import io
+from io import BytesIO
 from re import search
 from random import randint, choice
 
@@ -99,7 +99,7 @@ class VkBotChat:
         image_url : str
             ссылка на изображение
         """
-        arr = io.BytesIO(req_get(image_url).content)
+        arr = BytesIO(req_get(image_url).content)
         arr.seek(0)
         upload = VkUpload(self._vk_session)
         photo = upload.photo_messages(arr)

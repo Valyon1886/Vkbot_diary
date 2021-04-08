@@ -48,7 +48,7 @@ class VkBotChat:
         if VkBotStatus.get_state(self._user_id) != States.NONE:
             if user_message == 'отмена':
                 VkBotStatus.set_state(self._user_id, States.NONE)
-                self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}...")
+                self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
             else:
                 communities_links = [i.strip() for i in re_split(', | |\n', user_message)]
 
@@ -76,7 +76,10 @@ class VkBotChat:
                 if len(communities_names) == 0 and len(communities_numbers) == 0:
                     self._flag = False
                     keyboard = self._functions.create_menu("клавиатура--отмена")
-                    self.send_message(message="Ссылки на сообщество или его номера не найдено!", keyboard=keyboard)
+                    self.send_message(message="Ссылки на сообщество" +
+                                              (' или его номера' if VkBotStatus.get_state(
+                                                self._user_id) == States.DELETE_COMMUNITY else '') +
+                                              " не найдено!", keyboard=keyboard)
                 else:
                     try:
                         result = self._functions.change_users_community(self._vk_session_user,

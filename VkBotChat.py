@@ -147,22 +147,22 @@ class VkBotChat:
                     else:
                         self.send_message("Я бы мог рассказать что-то, но мне лень. ( ͡° ͜ʖ ͡°)")
 
-            elif user_message == 'добавить сообщество(а)':
+            elif user_message == 'добавить сообщество':
                 self._flag = False
                 VkBotStatus.set_state(self._user_id, States.ADD_COMMUNITY)
                 keyboard = self._functions.create_menu("клавиатура--отмена")
                 self.send_message(message=f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)",
                                   keyboard=keyboard)
 
-            elif user_message == 'удалить сообщество(а)':
+            elif user_message == 'удалить сообщество':
                 comm_from_me, list_comm_urls = self._functions.show_users_communities(self._vk_session_user,
-                                                                                      show_url=True)
+                                                                                      show_name=True, show_url=True)
                 if comm_from_me:
                     bot_message = "\nТекущие сообщества:\n" + \
                                   "\n".join([f"{str(i + 1)}) {list_comm_urls[i]}" for i in range(len(list_comm_urls))])
                     self._flag = False
                     VkBotStatus.set_state(self._user_id, States.DELETE_COMMUNITY)
-                    keyboard = self._functions.create_menu("клавиатура--отмена")
+                    keyboard = self._functions.create_menu("клавиатура--отмена", len(list_comm_urls))
                     self.send_message(message=f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)" +
                                               bot_message,
                                       keyboard=keyboard)

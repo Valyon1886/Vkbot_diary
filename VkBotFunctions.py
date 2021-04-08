@@ -41,13 +41,20 @@ class VkBotFunctions:
         self._user_id = user_id
 
     @staticmethod
-    def create_menu(user_message):
+    def create_menu(user_message, buttons = 0):
         """Создание клавиатуры на основе запроса пользователя.
 
-        :param user_message: сообщение пользователя
-        :type user_message: str
-        :rtype: VkKeyboard
-        :return: клавиатура с командами
+        Parameters
+        ----------
+        user_message: str
+            сообщение пользователя
+        buttons: int
+            количество кнопок для добавления
+        Return
+        ----------
+        keyboard: VkKeyboard
+            клавиатура с командами
+
         """
         keyboard = VkKeyboard(one_time=True)
 
@@ -70,12 +77,18 @@ class VkBotFunctions:
 
         if user_message == 'мем':
             keyboard.add_button('Случайный мем', color=VkKeyboardColor.PRIMARY)
-            keyboard.add_button('Мои сообщества')
             keyboard.add_line()
-            keyboard.add_button('Добавить сообщество(а)', color=VkKeyboardColor.POSITIVE)
-            keyboard.add_button('Удалить сообщество(а)', color=VkKeyboardColor.NEGATIVE)
+            keyboard.add_button('Добавить сообщество', color=VkKeyboardColor.POSITIVE)
+            keyboard.add_button('Удалить сообщество', color=VkKeyboardColor.NEGATIVE)
+            keyboard.add_line()
+            keyboard.add_button('Мои сообщества')
 
         if user_message == 'клавиатура--отмена':
+            if buttons != 0:
+                for i in range(buttons):
+                    keyboard.add_button(str(i+1))
+                    if i % 2 == 1 or i + 1 == buttons:
+                        keyboard.add_line()
             keyboard.add_button('Отмена', color=VkKeyboardColor.NEGATIVE)
 
         keyboard = keyboard.get_keyboard()
@@ -173,14 +186,36 @@ class VkBotFunctions:
 
     @staticmethod
     def _get_number_week(day_today: datetime):
-        """Получение номера недели."""
+        """Получение номера недели.
+
+        Parameters
+        ----------
+        day_today: datetime
+            сегодняшняя дата
+        Return
+        ----------
+        number: int
+            номер недели
+        """
         first_week = datetime(2021, 2, 10).isocalendar()[1]
         current_week = day_today.isocalendar()[1]
         number = current_week - first_week + 1
         return number
 
     def send_meme(self, vk_session_user):
-        """Отправляет пользователю случайный мем."""
+        """Отправляет пользователю случайный мем.
+
+        Parameters
+        ----------
+        vk_session_user: VkApi
+            пользователь для работы с мемами
+        Return
+        ----------
+        photo_url: str
+            ссылка на картинку
+        choice: random
+            сообщение к картинке
+        """
         if len([i for i in Users_communities.select()
                 .where(Users_communities.user_id == self._user_id).limit(1).execute()]) != 0:
             communities = [i for i in
@@ -209,7 +244,17 @@ class VkBotFunctions:
         return photo_url, choice(self._300_answers)
 
     def change_users_community(self, vk_session_user, need_delete: bool, communities_names):
-        """Добавляет или удаляет сообщества из таблицы"""
+        """Добавляет или удаляет сообщества из таблицы
+
+        Parameters
+        ----------
+        vk_session_user: VkApi
+            пользователь для работы с мемами
+        need_delete: bool
+            удалить или сохранить
+        communities_names: list
+            названия групп
+        """
         vk = vk_session_user.get_api()
         communities = vk.groups.getById(group_ids=communities_names)  # get ids of groups
         communities_ids = [int(i['id']) for i in communities]
@@ -226,7 +271,23 @@ class VkBotFunctions:
         return need_delete
 
     def show_users_communities(self, vk_session_user, show_name=False, show_url=False):
-        """Возвращает список сообществ из таблицы и стандартные это сообщества или собственные пользователя"""
+        """Возвращает список сообществ из таблицы и стандартные это сообщества или собственные пользователя
+
+        Parameters
+        ----------
+        vk_session_user: VkApi
+            пользователь для работы с мемами
+        show_name: bool
+            нужно ли показывать имена
+        show_url: bool
+            нужно ли показывать ссылки
+        Return
+        ----------
+        len(communities): int
+            размер списка сообществ
+        communities_list: list
+            список сообществ
+        """
         communities = []
         if len([i for i in Users_communities.select()
                 .where(Users_communities.user_id == self._user_id).limit(1).execute()]) != 0:
@@ -240,7 +301,9 @@ class VkBotFunctions:
         else:
             if not show_url:
                 communities_list = vk.groups.getById(group_ids=self._300_communities)
-        if show_name:
+        if show_name and show_url and len(communities) > 0:
+            communities_list = [i['name'] + " (https://vk.com/" + i['screen_name'] + ")" for i in communities_list]
+        elif show_name:
             communities_list = [i['name'] for i in communities_list]
         elif show_url and len(communities) > 0:
             communities_list = ["https://vk.com/" + i['screen_name'] for i in communities_list]

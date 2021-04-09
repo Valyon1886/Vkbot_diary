@@ -3,17 +3,17 @@ from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_
 
 
 class InitDatabase:
-    """Класс для добавления тестовых значений в базу данных"""
+    """Класс для добавления начальных значений в базу данных"""
 
     @staticmethod
     def ensure_start_data_added():
-        """Добавление тестовых значений в базу данных"""
+        """Добавление начальных значений в базу данных"""
         InitDatabase._ensure_users_added()
         InitDatabase._ensure_communities_added()
 
     @staticmethod
     def _ensure_users_added():
-        """Добавление тестовых значений в таблицу 'Users'"""
+        """Добавление начальных значений в таблицу 'Users'"""
         users_data = [
             {'user_id': 283292203, 'group': "ИКБО-03-19"},
             {'user_id': 286251203, 'group': "ИКБО-06-19"},
@@ -21,11 +21,11 @@ class InitDatabase:
         ]
         if len([i for i in Users.select().limit(1).execute()]) == 0:
             Users.insert_many(users_data).execute()
-            print("Тестовые значения добавлены в таблицу 'Users'!")
+            print("Начальных значения добавлены в таблицу 'Users'!")
 
     @staticmethod
     def _ensure_communities_added():
-        """Добавление тестовых значений в таблицу 'Users_communities'"""
+        """Добавление начальных значений в таблицу 'Users_communities'"""
         users_communities = [
             {'user_id': 92798890, 'community_id': 66678575},
             {'user_id': 92798890, 'community_id': 198870105},
@@ -34,4 +34,4 @@ class InitDatabase:
         ]
         if len([i for i in Users_communities.select().limit(1).execute()]) == 0:
             Users_communities.insert_many(users_communities).execute()
-            print("Тестовые значения добавлены в таблицу 'Users_communities'!")
+            print("Начальных значения добавлены в таблицу 'Users_communities'!")

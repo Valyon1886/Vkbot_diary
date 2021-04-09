@@ -41,6 +41,7 @@ def main():
     parser = Parser()
     schedule = parser.get_schedules()
     vk_session = VkApi(token=config.get_token())
+    print("Бот залогинился!")
     vk_session_user = None
     if config.get_user_info():
         chdir(config.get_dir_name())
@@ -48,7 +49,7 @@ def main():
         vk_session_user = VkApi(login, password)
         vk_session_user.auth()
         chdir("..")
-    print("Бот залогинился!")
+        print("Пользователь для бота авторизировался!")
     longpoll = VkLongPoll(vk_session)
     print("Бот начал слушать сообщения!")
 

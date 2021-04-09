@@ -61,7 +61,7 @@ class VkBotChat:
                 if VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY and len(communities_names) == 0:
                     for i in communities_links:
                         try:
-                            if int(i) - 1 > 0:
+                            if int(i) - 1 >= 0:
                                 communities_numbers.append(int(i) - 1)
                         except ValueError:
                             pass

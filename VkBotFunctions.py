@@ -16,7 +16,7 @@ class VkBotFunctions:
     """
 
     _300_communities = [
-        45045130,  # - Хрень, какой-то паблик
+        45045130,  # - МЕМЫ
         45523862,  # - Томат
         67580761,  # - КБ
         57846937,  # - MDK
@@ -85,9 +85,19 @@ class VkBotFunctions:
 
         if user_message == 'клавиатура--отмена':
             if buttons != 0:
+                buttons_in_row = None
+                stages = [0, 3, 9, 16, 21, 26]
+                for i in range(len(stages)):
+                    if buttons < stages[i]:
+                        buttons_in_row = i
+                        break
+                    elif buttons >= stages[-1]:
+                        buttons_in_row = len(stages) - 1
+                        break
+                buttons = buttons if buttons < stages[-1] else stages[-1] - 1
                 for i in range(buttons):
-                    keyboard.add_button(str(i+1))
-                    if i % 2 == 1 or i + 1 == buttons:
+                    keyboard.add_button(str(i + 1))
+                    if ((i + 1) % buttons_in_row == 0 and i != 0) or i + 1 == buttons or buttons_in_row == 1:
                         keyboard.add_line()
             keyboard.add_button('Отмена', color=VkKeyboardColor.NEGATIVE)
 
@@ -213,8 +223,8 @@ class VkBotFunctions:
         ----------
         photo_url: str
             ссылка на картинку
-        choice: random
-            сообщение к картинке
+        choice: str
+            случайное сообщение из списка к картинке
         """
         if len([i for i in Users_communities.select()
                 .where(Users_communities.user_id == self._user_id).limit(1).execute()]) != 0:
@@ -254,6 +264,10 @@ class VkBotFunctions:
             удалить или сохранить
         communities_names: list
             названия групп
+        Return
+        ----------
+        need_delete: bool
+            удалено или добавлено было сообщество
         """
         vk = vk_session_user.get_api()
         communities = vk.groups.getById(group_ids=communities_names)  # get ids of groups
@@ -283,8 +297,8 @@ class VkBotFunctions:
             нужно ли показывать ссылки
         Return
         ----------
-        len(communities): int
-            размер списка сообществ
+        communities_from: bool
+            сообщества от пользователя или из стандартных бота
         communities_list: list
             список сообществ
         """

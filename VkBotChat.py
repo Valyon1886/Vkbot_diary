@@ -7,6 +7,7 @@ from requests import get as req_get
 from vk_api import VkUpload, VkApi
 from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
+from vk_api.exceptions import ApiError
 from peewee import DoesNotExist
 
 from VkBotFunctions import VkBotFunctions
@@ -88,7 +89,7 @@ class VkBotChat:
                             self.send_message(message=f"Сообщество {'удалено' if result else 'сохранено'}!")
                         else:
                             self.send_message(message=f"Сообщества {'удалены' if result else 'сохранены'}!")
-                    except BaseException:
+                    except ApiError:
                         self._flag = False
                         keyboard = self._functions.create_menu("клавиатура--отмена")
                         if len(communities_names) == 1:
@@ -98,7 +99,7 @@ class VkBotChat:
         else:
             if user_message == 'начать':
                 self.send_message(message='Привет, чтобы открыть все возможности бота напиши свою группу'
-                                          '\nФорма записи группы: ИКБО-03-19')
+                                          '\nФорма записи группы: ИКБО-03-19.')
 
             elif search(r'([а-я]{4}-\d{2}-\d{2})', user_message):
                 if len([i for i in Weeks.select().where(Weeks.group == user_message.upper()).execute()]) > 0:
@@ -119,10 +120,11 @@ class VkBotChat:
             elif search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', user_message):
                 try:
                     group = Users.get(Users.user_id == self._user_id).group  # Для единичной выцепки
-                    # group = [i for i in Users.select().where(Users.user_id == self._user_id).limit(1)][0].group  # Для множественной
+                    # group = [i for i in Users.select().where(Users.user_id == self._user_id).limit(1)][0].group
+                    # Для множественной
                     self.send_message(self._functions.schedule_menu(user_message, group))
                 except DoesNotExist:  # and IndexError
-                    self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19')
+                    self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19.')
             elif user_message == 'мем':
                 self._flag = False
                 keyboard = self._functions.create_menu(user_message)
@@ -137,7 +139,7 @@ class VkBotChat:
                         try:
                             photo_url, bot_message = self._functions.send_meme(self._vk_session_user)
                             self.send_pic(photo_url, bot_message)
-                        except BaseException:
+                        except ApiError:
                             self.send_pic(
                                 "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
                                 "Ошибка vk:  Что-то пошло не так")
@@ -175,7 +177,7 @@ class VkBotChat:
                                   "\n".join([f"{str(i + 1)}) {list_comm[i]}" for i in range(len(list_comm))]))
 
             else:
-                self.send_message(message='Я не знаю такой команды')
+                self.send_message(message='Я не знаю такой команды.')
 
         if self._flag:
             keyboard = self._functions.create_menu("Продолжить")

@@ -8,7 +8,7 @@ from hashlib import md5
 from xlrd import open_workbook
 from requests import get
 from bs4 import BeautifulSoup
-from peewee import DoesNotExist, fn
+from peewee import fn
 
 from InitConfig import Config
 from MySQLStorage import Weeks, Days, Subjects, Lesson_start_end
@@ -141,6 +141,7 @@ class Parser:
 
 if __name__ == '__main__':
     import time
+    from peewee import DoesNotExist
 
     group = "ИКБО-03-19"
     # Weeks.create(group=group,

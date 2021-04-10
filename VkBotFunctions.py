@@ -4,7 +4,7 @@ from random import randint, choice
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from peewee import DoesNotExist
 
-from MySQLStorage import Users_communities, Weeks, Days, Subjects
+from MySQLStorage import Users_communities, Weeks, Days, Subjects, Lesson_start_end
 
 
 class VkBotFunctions:
@@ -42,7 +42,7 @@ class VkBotFunctions:
         self._user_id = user_id
 
     @staticmethod
-    def create_menu(user_message, buttons=0):
+    def create_menu(user_message: str, buttons=0):
         """Создание клавиатуры на основе запроса пользователя.
 
         Parameters
@@ -105,7 +105,7 @@ class VkBotFunctions:
         keyboard = keyboard.get_keyboard()
         return keyboard
 
-    def schedule_menu(self, user_message, group):
+    def schedule_menu(self, user_message: str, group: str):
         """Обрабатывает запрос пользователя и выдает ответ.
 
         Parameters
@@ -119,52 +119,44 @@ class VkBotFunctions:
         full_sentence: str
             сообщение для пользователя
         """
-        if user_message == "на сегодня":
-            week_day = datetime.now().isoweekday() - 1
-            if week_day < 6:
-                week_day = self._week_days[week_day]
-                full_sentence = self._make_schedule(group, week_day, one_day=True)
-            else:
-                week_day = "Воскресенье"
+        if user_message in ["на сегодня", "на завтра", "на эту неделю", "на следующую неделю"]:
+            lessons_start_end = {i.lesson_number: [i.start_time, i.end_time]
+                                 for i in Lesson_start_end.select().execute()}
+            if user_message in ["на сегодня", "на завтра"]:
+                if user_message == "на сегодня":
+                    week_day = datetime.now().isoweekday() - 1
+                else:
+                    week_day = datetime.now().isoweekday()
+                    if week_day == 7:
+                        week_day = 0
+                if week_day < 6:
+                    week_day = self._week_days[week_day]
+                    full_sentence = self._make_schedule(group, week_day, lessons_start_end, one_day=True)
+                else:
+                    week_day = "Воскресенье"
+                    full_sentence = ""
+                if full_sentence != "":
+                    return f'Расписание на {user_message.split(" ")[-1]}:\n{week_day}\n{full_sentence}'
+                else:
+                    return f'{user_message.split(" ")[-1].capitalize()} - {week_day.lower()}, выходной.'
+            elif user_message in ["на эту неделю", "на следующую неделю"]:
                 full_sentence = ""
-            if full_sentence != "":
-                return 'Расписание на сегодня:\n' + week_day + '\n' + full_sentence
-            else:
-                return f'Сегодня - {week_day.lower()}, выходной'
-        elif user_message == "на завтра":
-            week_day = datetime.now().isoweekday()
-            if week_day == 7:
-                week_day = 0
-            if week_day < 6:
-                week_day = self._week_days[week_day]
-                full_sentence = self._make_schedule(group, week_day, one_day=True)
-            else:
-                week_day = "Воскресенье"
-                full_sentence = ""
-            if full_sentence != "":
-                return 'Расписание на завтра:\n' + week_day + '\n' + full_sentence
-            else:
-                return f'Завтра - {week_day.lower()}, выходной'
-        elif user_message == "на эту неделю":
-            full_sentence = ""
-            for i in range(len(self._week_days)):
-                week_day = self._week_days[i]
-                full_sentence += '\n' + week_day + ':\n' + self._make_schedule(group, week_day) + '\n\n'
-            return 'Расписание на эту неделю: ' + full_sentence
-        elif user_message == "на следующую неделю":
-            full_sentence = ""
-            for i in range(len(self._week_days)):
-                week_day = self._week_days[i]
-                full_sentence += '\n' + week_day + ':\n' + self._make_schedule(group, week_day, next_week=True) + '\n\n'
-            return 'Расписание на следующую неделю: ' + full_sentence
+                for i in range(len(self._week_days)):
+                    week_day = self._week_days[i]
+                    full_sentence += f'\n{week_day}:\n' + \
+                                     self._make_schedule(group,
+                                                         week_day,
+                                                         lessons_start_end,
+                                                         next_week=user_message == "на следующую неделю") + '\n\n'
+                return f'Расписание {user_message}: {full_sentence}'
         elif user_message == "какая неделя?":
-            return 'Сейчас ' + str(self._get_number_week(datetime.now())) + ' неделя.'
+            return f'Сейчас {str(self._get_number_week(datetime.now()))} неделя.'
         elif user_message == "какая группа?":
-            return 'Твоя группа ' + group
+            return f'Твоя группа {group}.'
         else:
-            return "Я не знаю такой команды"
+            return "Я не знаю такой команды."
 
-    def _make_schedule(self, group, week_day, one_day=False, next_week=False):
+    def _make_schedule(self, group: str, week_day: str, lessons_start_end: dict, one_day=False, next_week=False):
         """Преобразует часть расписание в сообщение для пользователя.
 
         Parameters
@@ -173,6 +165,8 @@ class VkBotFunctions:
             группа пользователя
         week_day : str
             день недели
+        lessons_start_end : dict
+            словарь начала и окончания каждой пары
         one_day : bool
             вывод на один день или несколько (по умолчанию на несколько)
         next_week : bool
@@ -201,11 +195,16 @@ class VkBotFunctions:
         for subj in subjects:
             if not subj.subject:
                 if not one_day or any_subject:
-                    full_sentence += f"{str(subj.lesson_number)}) --\n"
+                    full_sentence += f"{str(subj.lesson_number)}) " \
+                                     f"c {lessons_start_end[subj.lesson_number][0].strftime('%H:%M')} " \
+                                     f"по {lessons_start_end[subj.lesson_number][1].strftime('%H:%M')}\n --\n"
             else:
-                full_sentence += f"{str(subj.lesson_number)}) {subj.subject} {subj.lesson_type}. "
+                full_sentence += f"{str(subj.lesson_number)}) " \
+                                 f"c {lessons_start_end[subj.lesson_number][0].strftime('%H:%M')} " \
+                                 f"по {lessons_start_end[subj.lesson_number][1].strftime('%H:%M')}\n" \
+                                 f"{subj.subject} {subj.lesson_type}. "
                 if subj.teacher:
-                    full_sentence += f"Преподаватель: {subj.teacher}"
+                    full_sentence += f"Преподаватель: {subj.teacher} "
                 if subj.class_number:
                     full_sentence += f"Аудитория: {subj.class_number}"
                 if subj.link:
@@ -272,7 +271,7 @@ class VkBotFunctions:
 
         return photo_url, choice(self._300_answers)
 
-    def change_users_community(self, vk_session_user, need_delete: bool, communities_names):
+    def change_users_community(self, vk_session_user, need_delete: bool, communities_names: list):
         """Добавляет или удаляет сообщества из таблицы
 
         Parameters
@@ -304,7 +303,7 @@ class VkBotFunctions:
         return need_delete
 
     def show_users_communities(self, vk_session_user, show_name=False, show_url=False):
-        """Возвращает список сообществ из таблицы и стандартные это сообщества или собственные пользователя
+        """Возвращает список сообществ из таблицы и стандартные ли это сообщества или собственные пользователя
 
         Parameters
         ----------

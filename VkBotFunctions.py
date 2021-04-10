@@ -2,8 +2,9 @@ from datetime import datetime
 from random import randint, choice
 
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
+from peewee import DoesNotExist
 
-from MySQLStorage import Users_communities
+from MySQLStorage import Users_communities, Weeks, Days, Subjects
 
 
 class VkBotFunctions:
@@ -41,7 +42,7 @@ class VkBotFunctions:
         self._user_id = user_id
 
     @staticmethod
-    def create_menu(user_message, buttons = 0):
+    def create_menu(user_message, buttons=0):
         """Создание клавиатуры на основе запроса пользователя.
 
         Parameters
@@ -104,15 +105,13 @@ class VkBotFunctions:
         keyboard = keyboard.get_keyboard()
         return keyboard
 
-    def schedule_menu(self, user_message, schedules, group):
+    def schedule_menu(self, user_message, group):
         """Обрабатывает запрос пользователя и выдает ответ.
 
         Parameters
         ----------
         user_message : str
             сообщение пользователя
-        schedules : dict
-            расписание
         group : str
             группа пользователя
         Return
@@ -124,35 +123,39 @@ class VkBotFunctions:
             week_day = datetime.now().isoweekday() - 1
             if week_day < 6:
                 week_day = self._week_days[week_day]
-                student_group = schedules["groups"][group]
-                full_sentence = self._make_schedule(week_day, student_group)
+                full_sentence = self._make_schedule(group, week_day, one_day=True)
+            else:
+                week_day = "Воскресенье"
+                full_sentence = ""
+            if full_sentence != "":
                 return 'Расписание на сегодня:\n' + week_day + '\n' + full_sentence
             else:
-                return 'Выходной'
+                return f'Сегодня - {week_day.lower()}, выходной'
         elif user_message == "на завтра":
             week_day = datetime.now().isoweekday()
             if week_day == 7:
                 week_day = 0
             if week_day < 6:
                 week_day = self._week_days[week_day]
-                student_group = schedules["groups"][group]
-                full_sentence = self._make_schedule(week_day, student_group)
+                full_sentence = self._make_schedule(group, week_day, one_day=True)
+            else:
+                week_day = "Воскресенье"
+                full_sentence = ""
+            if full_sentence != "":
                 return 'Расписание на завтра:\n' + week_day + '\n' + full_sentence
             else:
-                return 'Выходной'
+                return f'Завтра - {week_day.lower()}, выходной'
         elif user_message == "на эту неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
-                student_group = schedules["groups"][group]
-                full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group) + '\n\n'
+                full_sentence += '\n' + week_day + ':\n' + self._make_schedule(group, week_day) + '\n\n'
             return 'Расписание на эту неделю: ' + full_sentence
         elif user_message == "на следующую неделю":
             full_sentence = ""
             for i in range(len(self._week_days)):
                 week_day = self._week_days[i]
-                student_group = schedules["groups"][group]
-                full_sentence += '\n' + week_day + ':\n' + self._make_schedule(week_day, student_group, 1) + '\n\n'
+                full_sentence += '\n' + week_day + ':\n' + self._make_schedule(group, week_day, next_week=True) + '\n\n'
             return 'Расписание на следующую неделю: ' + full_sentence
         elif user_message == "какая неделя?":
             return 'Сейчас ' + str(self._get_number_week(datetime.now())) + ' неделя.'
@@ -161,37 +164,53 @@ class VkBotFunctions:
         else:
             return "Я не знаю такой команды"
 
-    def _make_schedule(self, week_day, student_group, next_week=0):
+    def _make_schedule(self, group, week_day, one_day=False, next_week=False):
         """Преобразует часть расписание в сообщение для пользователя.
 
         Parameters
         ----------
+        group : str
+            группа пользователя
         week_day : str
             день недели
-        student_group : str
-            группа пользователя
-        next_week : int
+        one_day : bool
+            вывод на один день или несколько (по умолчанию на несколько)
+        next_week : bool
             вывод на следующую неделю (по умолчанию на эту)
         Return
         ----------
         full_sentence: str
             преобразованная строка
         """
-        schedules_group = student_group[week_day]
-        chet_week = (self._get_number_week(datetime.now()) + next_week + 1) % 2
+        even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
+        try:
+            day_of_group_id = Weeks.get((Weeks.group == group) & (Weeks.even == even_week)).days_of_group_id
+
+            schedules_of_day = Days.get(
+                (Days.day_of_week_id == day_of_group_id) & (Days.day_of_week == week_day)).subject_schedules_of_day_id
+
+            subjects = [i for i in
+                        Subjects.select().where(Subjects.schedule_of_subject_id == schedules_of_day).execute()]
+            if len(subjects) == 0:
+                raise DoesNotExist
+        except DoesNotExist:
+            return "Данные не доступны"
+
         full_sentence = ""
-        for i in range(len(schedules_group)):
-            if not schedules_group[i][chet_week]['subject']:
-                full_sentence = full_sentence + str(schedules_group[i][chet_week]['lesson_number']) + ') --\n'
+        any_subject = any([bool(i.subject) for i in subjects])
+        for subj in subjects:
+            if not subj.subject:
+                if not one_day or any_subject:
+                    full_sentence += f"{str(subj.lesson_number)}) --\n"
             else:
-                full_sentence = full_sentence + str(schedules_group[i][chet_week]['lesson_number']) + ') ' + \
-                                schedules_group[i][chet_week]['subject'] + ' ' + \
-                                schedules_group[i][chet_week]['lesson_type'] + '.'
-                if schedules_group[i][chet_week]['lecturer']:
-                    full_sentence = full_sentence + ' Преподаватель: ' + schedules_group[i][chet_week]['lecturer']
-                if schedules_group[i][chet_week]['url']:
-                    full_sentence = full_sentence + '\nСсылка: ' + schedules_group[i][chet_week]['url']
-                full_sentence = full_sentence + '\n'
+                full_sentence += f"{str(subj.lesson_number)}) {subj.subject} {subj.lesson_type}. "
+                if subj.teacher:
+                    full_sentence += f"Преподаватель: {subj.teacher}"
+                if subj.class_number:
+                    full_sentence += f"Аудитория: {subj.class_number}"
+                if subj.link:
+                    full_sentence += f"\nСсылка: {subj.link}"
+                full_sentence += "\n"
         return full_sentence
 
     @staticmethod
@@ -274,11 +293,11 @@ class VkBotFunctions:
         communities_ids = [int(i['id']) for i in communities]
         for community_id in communities_ids:
             if len([i for i in Users_communities.select()
-                    .where(Users_communities.user_id == self._user_id and
-                           Users_communities.community_id == community_id).limit(1).execute()]) != 0:
+                    .where((Users_communities.user_id == self._user_id) &
+                           (Users_communities.community_id == community_id)).limit(1).execute()]) != 0:
                 if need_delete:
-                    Users_communities.delete().where(Users_communities.user_id == self._user_id and
-                                                     Users_communities.community_id == community_id).execute()
+                    Users_communities.delete().where((Users_communities.user_id == self._user_id) &
+                                                     (Users_communities.community_id == community_id)).execute()
             else:
                 if not need_delete:
                     Users_communities.create(user_id=self._user_id, community_id=community_id)

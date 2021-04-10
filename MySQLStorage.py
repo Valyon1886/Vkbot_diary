@@ -1,44 +1,47 @@
 from peewee import *
+
 from InitSQL import InitSQL
 
 
 class BaseModel(Model):
-    """Базовая модель таблицы для базы данной"""
+    """Базовая модель таблицы для базы данных"""
 
     class Meta:
         database = InitSQL.get_DB()
 
 
-class Schedule_of_subject(BaseModel):
+class Subjects(BaseModel):
     """Таблица информации о каждой паре"""
-    schedule_id = AutoField(column_name='ScheduleId')
-    lesson_number = TimeField(column_name='LessonNumber')
-    subject_task = TextField(column_name='Subject/Task')
+    schedule_of_subject_id = IntegerField(column_name='ScheduleOfSubjectId')
+    lesson_number = IntegerField(column_name='LessonNumber')
+    subject = TextField(column_name='Subject')
     lesson_type = TextField(column_name='LessonType')
     teacher = TextField(column_name='Teacher')
     class_number = TextField(column_name='ClassNumber')
     link = TextField(column_name='Link')
 
     class Meta:
-        table_name = 'Schedule_of_day'
+        table_name = 'Subjects'
 
 
-class Days_Lessons(BaseModel):
-    """Таблица пар для дней"""
-    day_lesson_id = AutoField(column_name='DayLessonId')
+class Days(BaseModel):
+    """Таблица id пар для дней"""
+    day_of_week_id = IntegerField(column_name='DayOfWeekId')
     day_of_week = TextField(column_name='DayOfWeek')
-    schedule_of_subject = ForeignKeyField(Schedule_of_subject, to_field='schedule_id')
+    # schedule_of_subject = ForeignKeyField(Subjects, to_field='schedule_id')
+    subject_schedules_of_day_id = IntegerField(column_name='SubjectScheduleOfDayId')
 
     class Meta:
         table_name = 'Days'
 
 
 class Weeks(BaseModel):
-    """Таблица дней и пар для выбранной группы и нечётной/чётной недели"""
+    """Таблица id дней для выбранной группы и нечётной/чётной недели"""
     week_id = AutoField(column_name='WeekId')
     group = TextField(column_name='Group')
     even = BooleanField(column_name='Even')
-    day_lesson = ForeignKeyField(Days_Lessons, to_field='day_lesson_id')
+    # day_lesson = ForeignKeyField(Days, to_field='day_lesson_id')
+    days_of_group_id = IntegerField(column_name='DaysOfGroupId')
 
     class Meta:
         table_name = 'Weeks'
@@ -82,47 +85,3 @@ class Users_communities(BaseModel):
 
     class Meta:
         table_name = 'Users_communities'
-
-
-'''
-class Role(BaseModel):
-    """ Field Types """
-    role_id = AutoField(column_name='RoleId')
-    rolename = CharField(25)
-
-    class Meta:
-        db_table = 'roles'
-
-
-class User(BaseModel):
-    """ Field Types """
-    user_id = PrimaryKeyField()
-    username = CharField(25)
-    role = ForeignKeyField(Role, to_field="role_id")
-
-    class Meta:
-        db_table = 'users'
-'''
-
-if __name__ == '__main__':
-    print("IDDKD")
-    # datetime.datetime.strptime("12-40", '%H-%M').time()
-    # User.create(username="Lol2", role=Role.create(rolename="Name2"))
-    #
-    # for user in User.select().where(User.user_id == 1):
-    #     print(user.username)
-    #     print(user.role.rolename)
-    # artists_data = [
-    #     {'name': '1-qаыаed'},
-    #     {'name': '2-qasggsg'},
-    #     {'name': '3-qaswed'},
-    #     {'name': '41-yhnbgt'},
-    #     {'name': '5-yhnbgsght'},
-    #     {'name': '14-yhgsgsnbgt'}
-    # ]
-    # # Artist.insert_many(artists_data).execute()
-    #
-    # cur_query = Artist.select().where("1" in Artist.name).limit(10).order_by(Artist.artist_id.desc())
-    # for item in cur_query.dicts().execute():
-    #     print('artist: ', item)
-    # MySQL()

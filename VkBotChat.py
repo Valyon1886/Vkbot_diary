@@ -1,18 +1,17 @@
-from requests import get as req_get
 from io import BytesIO
 from re import search, findall
 from re import split as re_split
 from random import randint, choice
 
+from requests import get as req_get
 from vk_api import VkUpload, VkApi
 from vk_api.utils import get_random_id
+from vk_api.keyboard import VkKeyboard
+from peewee import DoesNotExist
 
 from VkBotFunctions import VkBotFunctions
-from vk_api.keyboard import VkKeyboard
-
 from VkBotStatus import States, VkBotStatus
-from MySQLStorage import Users
-from peewee import DoesNotExist
+from MySQLStorage import Users, Weeks
 
 
 class VkBotChat:
@@ -35,15 +34,13 @@ class VkBotChat:
         self._vk_session_user = vk_session_user
         self._flag = True
 
-    def get_response(self, user_message, schedule):
+    def get_response(self, user_message):
         """Анализирует запрос пользователя и отвечает на него.
 
         Parameters
         ----------
         user_message : str
             сообщение пользователя
-        schedule : dict
-            расписание
         """
         if VkBotStatus.get_state(self._user_id) != States.NONE:
             if user_message == 'отмена':
@@ -78,7 +75,7 @@ class VkBotChat:
                     keyboard = self._functions.create_menu("клавиатура--отмена")
                     self.send_message(message="Ссылки на сообщество" +
                                               (' или его номера' if VkBotStatus.get_state(
-                                                self._user_id) == States.DELETE_COMMUNITY else '') +
+                                                  self._user_id) == States.DELETE_COMMUNITY else '') +
                                               " не найдено!", keyboard=keyboard)
                 else:
                     try:
@@ -104,7 +101,7 @@ class VkBotChat:
                                           '\nФорма записи группы: ИКБО-03-19')
 
             elif search(r'([а-я]{4}-\d{2}-\d{2})', user_message):
-                if user_message.upper() in schedule["groups"]:
+                if len([i for i in Weeks.select().where(Weeks.group == user_message.upper()).execute()]) > 0:
                     if len([i for i in Users.select().where(Users.user_id == self._user_id).execute()]) != 0:
                         Users.update(group=user_message.upper()).where(Users.user_id == self._user_id).execute()
                     else:
@@ -123,7 +120,7 @@ class VkBotChat:
                 try:
                     group = Users.get(Users.user_id == self._user_id).group  # Для единичной выцепки
                     # group = [i for i in Users.select().where(Users.user_id == self._user_id).limit(1)][0].group  # Для множественной
-                    self.send_message(self._functions.schedule_menu(user_message, schedule, group))
+                    self.send_message(self._functions.schedule_menu(user_message, group))
                 except DoesNotExist:  # and IndexError
                     self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19')
             elif user_message == 'мем':
@@ -202,10 +199,10 @@ class VkBotChat:
 
         Parameters
         ----------
-        message : str
-            сообщение для пользователя (по умолчанию None)
         image_url : str
             ссылка на изображение
+        message : str
+            сообщение для пользователя (по умолчанию None)
         """
         arr = BytesIO(req_get(image_url).content)
         arr.seek(0)

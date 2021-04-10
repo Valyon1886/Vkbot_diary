@@ -1,5 +1,4 @@
-from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes, Lesson_start_end, \
-    Users_communities
+from MySQLStorage import Weeks, Days, Subjects, Users, Users_notes, Lesson_start_end, Users_communities
 
 
 class InitDatabase:
@@ -21,7 +20,7 @@ class InitDatabase:
         ]
         if len([i for i in Users.select().limit(1).execute()]) == 0:
             Users.insert_many(users_data).execute()
-            print("Начальных значения добавлены в таблицу 'Users'!")
+            print("Начальные значения добавлены в таблицу 'Users'!")
 
     @staticmethod
     def _ensure_communities_added():
@@ -34,4 +33,4 @@ class InitDatabase:
         ]
         if len([i for i in Users_communities.select().limit(1).execute()]) == 0:
             Users_communities.insert_many(users_communities).execute()
-            print("Начальных значения добавлены в таблицу 'Users_communities'!")
+            print("Начальные значения добавлены в таблицу 'Users_communities'!")

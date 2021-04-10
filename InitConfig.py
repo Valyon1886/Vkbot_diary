@@ -20,6 +20,11 @@ class Config:
         else:
             self._set_up_config()
 
+    def save_config(self):
+        """Сохраняет файл конфигурации"""
+        with open(file=Path(self._dir_name + '/' + self._config_name), mode="w", encoding="utf-8") as config_file:
+            dump(self._config_dict, config_file, indent=2)
+
     def get_dir_name(self):
         """Возвращает имя директории, где хранятся конфигурационные файлы."""
         return self._dir_name
@@ -31,9 +36,9 @@ class Config:
         self._set_user_info()
         self._set_database_info()
         self._set_init_database()
+        self.set_schedule_info(dict())
 
-        with open(file=Path(self._dir_name + '/' + self._config_name), mode="w", encoding="utf-8") as config_file:
-            dump(self._config_dict, config_file, indent=2)
+        self.save_config()
         print("Файл настроек сохранён!")
 
     def _set_token(self):
@@ -92,3 +97,11 @@ class Config:
     def get_init_database(self):
         """Возвращает информацию о необходимости добавлений тестовых значений в базу данных"""
         return self._config_dict["init_database"]
+
+    def set_schedule_info(self, schedule_info_dict: dict):
+        """Сохраняет словарь: ключ - имя скачанного файла расписания, значение - хеш-значение (md5) этого файла"""
+        self._config_dict["schedule_info"] = schedule_info_dict
+
+    def get_schedule_info(self):
+        """Возвращает словарь с скачаными файлами и их хеш-значениями (md5)"""
+        return self._config_dict["schedule_info"]

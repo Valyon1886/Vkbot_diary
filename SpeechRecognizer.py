@@ -1,7 +1,8 @@
-from requests import get as req_get
-import speech_recognition as sr
 from io import BytesIO
 from subprocess import Popen, PIPE
+
+from requests import get as req_get
+import speech_recognition as sr
 
 
 class SpeechRecognizer:

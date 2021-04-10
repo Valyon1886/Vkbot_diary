@@ -7,27 +7,23 @@ from InitConfig import Config
 from VkBotParser import Parser
 from VkBotChat import VkBotChat
 from InitSQL import InitSQL
-from MySQLStorage import Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes, Lesson_start_end, \
-    Users_communities
+from MySQLStorage import Weeks, Days, Subjects, Users, Users_notes, Lesson_start_end, Users_communities
 from InitDatabase import InitDatabase
 from SpeechRecognizer import SpeechRecognizer
 
 
 # TODO:
-#  Загрузка расписания в бд (после этого можно будет добавлять заметки)
 #  1 Расписание 2. Пользователи/настройки 3. Заметки
 #  Добавление заметок (напротив предмета, см таблицу)
 #  Добавление своих пунктов в расписание (см таблицу)
-#  Вывод расписания из бд (на сегодня/на неделю)
 #  Обновление расписания в бд (с сохранением записей пользователя) !!!!!!!!!!!!!!!!!
-#  Случайный мем - работает с помощью обычного пользователя | надо доделать!
 #  При парсинге расписания и заметок на день сортировать их в порядке возрастания времени начала как
 #                                                               в Things to practice/README.md и выводить в виде таблицы
 
 def ensure_tables_created():
     """Проверка, что таблицы созданы"""
-    InitSQL.get_DB().create_tables(
-        [Weeks, Days_Lessons, Schedule_of_subject, Users, Users_notes, Lesson_start_end, Users_communities])
+    InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Users,
+                                    Users_notes, Lesson_start_end, Users_communities])
 
 
 def main():
@@ -38,8 +34,7 @@ def main():
     print("Соединение с базой данных установлено!")
     if config.get_init_database():
         InitDatabase.ensure_start_data_added()
-    parser = Parser()
-    schedule = parser.get_schedules()
+    Parser(config)
     vk_session = VkApi(token=config.get_token())
     print("Бот залогинился!")
     vk_session_user = None
@@ -57,12 +52,11 @@ def main():
         if event.type == VkEventType.MESSAGE_NEW and (
                 event.text or "attach1_kind" in event.attachments) and event.to_me:
             user_message = event.text.lower()
-            if "attach1_kind" in event.attachments:
-                if event.attachments["attach1_kind"] == 'audiomsg':
-                    p = eval(event.attachments["attachments"])
-                    user_message = SpeechRecognizer.get_phrase(p[0]['audio_message']['link_mp3']).lower()
+            if "attach1_kind" in event.attachments and event.attachments["attach1_kind"] == 'audiomsg':
+                attachs = eval(event.attachments["attachments"])
+                user_message = SpeechRecognizer.get_phrase(attachs[0]['audio_message']['link_mp3']).lower()
             bot = VkBotChat(vk_session, event.user_id, vk_session_user)
-            bot.get_response(user_message, schedule)
+            bot.get_response(user_message)
 
 
 if __name__ == '__main__':

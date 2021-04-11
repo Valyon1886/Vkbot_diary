@@ -6,6 +6,7 @@ from xlrd import open_workbook
 from requests import get
 from bs4 import BeautifulSoup
 from peewee import fn, DoesNotExist
+from colorama import Fore, Style
 
 from InitConfig import Config
 from InitSQL import InitSQL
@@ -48,7 +49,9 @@ class Parser:
         ]
 
         if any([i == 0 for i in tables_length]) and not all([i == 0 for i in tables_length]):
-            print("Одна из таблиц 'Weeks', 'Days' или 'Subjects' оказалась пуста! Заполняем все снова!")
+            print(Fore.LIGHTRED_EX +
+                  "Одна из таблиц 'Weeks', 'Days' или 'Subjects' оказалась пуста! Заполняем все снова!" +
+                  Style.RESET_ALL)
             parse_all_files_anyway = True
             InitSQL.get_DB().drop_tables([Weeks, Days, Subjects, Lesson_start_end])
             InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Lesson_start_end])
@@ -64,22 +67,23 @@ class Parser:
                         files_parsed.append(True)
                         md5_hash = md5(req.content).hexdigest()
                         if Parser._schedule_info.get(x["href"], None) != md5_hash or parse_all_files_anyway:
-                            print(f"Бот парсит файл {x['href'].split('/')[-1]}")
+                            print(Fore.LIGHTGREEN_EX + f"Бот парсит файл {x['href'].split('/')[-1]}" + Style.RESET_ALL)
                             Parser._parse_table_to_DB(req.content)
-                            print(f"Бот пропарсил файл {x['href'].split('/')[-1]}")
+                            print(Fore.GREEN + f"Бот пропарсил файл {x['href'].split('/')[-1]}" + Style.RESET_ALL)
                             Parser._schedule_info[x["href"]] = md5_hash
                         else:
-                            print(f"Хеш файла {x['href'].split('/')[-1]} идентичен. Пропускаем...")
+                            print(Fore.GREEN +
+                                  f"Хеш файла {x['href'].split('/')[-1]} идентичен. Пропускаем..." + Style.RESET_ALL)
                         break
                     else:
                         if _try != 0:
                             files_parsed.pop()
                         files_parsed.append(False)
-                        print(f"Ошибка {req.status_code} при скачивании файла!" +
+                        print(Fore.RED + f"Ошибка {req.status_code} при скачивании файла!" +
                               (f' Осталось попыток - {str(number_of_tries - _try - 1)}'
-                               if (number_of_tries - _try - 1) != 0 else ''))
+                               if (number_of_tries - _try - 1) != 0 else '') + Style.RESET_ALL)
         if not any(files_parsed):
-            print("Ни одного файла не удалось скачать! Сраные серваки МИРЭА...")
+            print(Fore.LIGHTRED_EX + "Ни одного файла не удалось скачать! Сраные серваки МИРЭА..." + Style.RESET_ALL)
         else:
             Config.set_schedule_info(Parser._schedule_info)
             Config.save_config()
@@ -146,12 +150,14 @@ class Parser:
                                 day_id = Weeks.get(
                                     (Weeks.group == group_cell) & (Weeks.even == bool(evenness))).days_of_group_id
                                 existing_records[evenness]["day_id"] = day_id
+                            except DoesNotExist:
+                                existing_records[evenness]["day_id"] = None
 
+                            try:
                                 subject_id = Days.get((Days.day_of_week_id == existing_records[evenness]["day_id"]) & (
                                         Days.day_of_week == Parser._week_days[day])).subject_schedules_of_day_id
                                 existing_records[evenness]["subject_id"] = subject_id
                             except DoesNotExist:
-                                existing_records[evenness]["day_id"] = None
                                 existing_records[evenness]["subject_id"] = None
 
                             if len([i for i in Subjects.select().where(

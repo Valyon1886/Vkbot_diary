@@ -3,6 +3,8 @@ from os.path import isfile, exists
 from pathlib import Path
 from json import dump, load
 
+from colorama import Fore, Style
+
 
 class Config:
     """Класс Config используется для создания и считывания файлов управления для бота."""
@@ -16,12 +18,13 @@ class Config:
         file_exists = False
         if not exists(Config._dir_name):
             makedirs(Config._dir_name)
+        first = len(Config._config_dict) == 0
         if isfile(Path(Config._dir_name + '/' + Config._config_name)):
             with open(file=Path(Config._dir_name + '/' + Config._config_name), mode="r",
                       encoding="utf-8") as config_file:
                 Config._config_dict = load(config_file)
             file_exists = True
-        Config._set_up_config(file_exists)
+        Config._set_up_config(file_exists, first)
 
     @staticmethod
     def save_config():
@@ -35,20 +38,20 @@ class Config:
         return Config._dir_name
 
     @staticmethod
-    def _set_up_config(file_exists=False):
+    def _set_up_config(file_exists=False, first=False):
         """Создаёт и заполняет конфигурационный файл бота."""
         changes_made = False
-        if len(Config._config_dict) != 0:
+        if first:
             if not file_exists:
-                print(f"Файл '{Config._config_name}' не найден! Настраиваем новый!")
+                print(Fore.YELLOW + f"Файл '{Config._config_name}' не найден! Настраиваем новый!" + Style.RESET_ALL)
             else:
-                print(f"Файл '{Config._config_name}' найден!")
+                print(Fore.YELLOW + f"Файл '{Config._config_name}' найден!" + Style.RESET_ALL)
 
         if Config._config_dict.get("token", None) is None:
             changes_made = True
             Config._set_token()
 
-        if Config._config_dict.get("user_login", None) is None or\
+        if Config._config_dict.get("user_login", None) is None or \
                 Config._config_dict.get("user_password", None) is None:
             changes_made = True
             Config._set_user_info()
@@ -71,8 +74,8 @@ class Config:
 
         if changes_made:
             Config.save_config()
-        if not file_exists and len(Config._config_dict) != 0:
-            print("Файл настроек сохранён!")
+        if not file_exists:
+            print(Fore.GREEN + "Файл настроек сохранён!" + Style.RESET_ALL)
 
     @staticmethod
     def _set_token():
@@ -114,7 +117,7 @@ class Config:
                 "password": "root",
                 "database": "Storage"
             }
-            print("Настройки взяты по умолчанию:\n" + str(myDB))
+            print(Fore.LIGHTGREEN_EX + "Настройки взяты по умолчанию:\n" + str(myDB) + Style.RESET_ALL)
         else:
             myDB["host"] = input("Введите хост базы данных: ")
             myDB["user"] = input("Введите логин пользователя для подключения к базе данных: ")

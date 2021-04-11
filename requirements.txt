@@ -7,3 +7,5 @@ cryptography==3.4.7
 peewee==3.14.4
 pyinstaller==4.0
 SpeechRecognition==3.8.1
+colorama~=0.4.4
+requests~=2.25.1

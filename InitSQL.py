@@ -3,6 +3,7 @@ from os import getcwd
 from sys import exit
 
 from peewee import *
+from colorama import Fore, Style
 
 from InitConfig import Config
 
@@ -49,5 +50,5 @@ class InitSQL:
                     if tries == total_tries:
                         exit(message)
                     else:
-                        print(message + f"\nОсталось попыток - {total_tries - tries}")
+                        print(Fore.RED + message + f"\nОсталось попыток - {total_tries - tries}" + Style.RESET_ALL)
         return myDB

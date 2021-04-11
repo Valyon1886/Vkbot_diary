@@ -13,6 +13,7 @@ from peewee import DoesNotExist
 from VkBotFunctions import VkBotFunctions
 from VkBotStatus import States, VkBotStatus
 from MySQLStorage import Users_groups, Weeks
+from VkBotParser import Parser
 
 
 class VkBotChat:
@@ -118,13 +119,17 @@ class VkBotChat:
                 self.send_message(message='Выбери возможность', keyboard=keyboard)
 
             elif search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', user_message):
-                try:
-                    group = Users_groups.get(Users_groups.user_id == self._user_id).group  # Для единичной выцепки
-                    # group = [i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).limit(1)][0].group
-                    # Для множественной
-                    self.send_message(self._functions.schedule_menu(user_message, group))
-                except DoesNotExist:  # and IndexError
-                    self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19.')
+                if Parser.get_bot_parsing_state() and search(r'(на [а-я]+( [а-я]+)?)', user_message):
+                    self.send_message(message='Бот обновляет расписание и данная команда временно не доступна.' +
+                                              ' Попробуйте позже.')
+                else:
+                    try:
+                        group = Users_groups.get(Users_groups.user_id == self._user_id).group  # Для единичной выцепки
+                        # group = [i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).limit(1)][0].group
+                        # Для множественной
+                        self.send_message(self._functions.schedule_menu(user_message, group))
+                    except DoesNotExist:  # and IndexError
+                        self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19.')
             elif user_message == 'мем':
                 self._flag = False
                 keyboard = self._functions.create_menu(user_message)

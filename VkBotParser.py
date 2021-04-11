@@ -1,6 +1,5 @@
 from re import search
 from datetime import time
-from sys import exit
 from hashlib import md5
 
 from xlrd import open_workbook
@@ -17,16 +16,23 @@ class Parser:
     """Класс Parser используется для получения расписания с сайта МИРЭА."""
     _week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
     _lesson_start_end_table_filled = False
-    _parsed_any_file = False
-    _parse_all_files_anyway = False
+    _schedule_info = None
+    _bot_parsing = False
 
-    def __init__(self, config: Config):
-        self._config = config
-        self._schedule_info = self._config.get_schedule_info()
-        self._download_schedules()
+    @staticmethod
+    def get_bot_parsing_state():
+        """Возвращает значение парсит ли бот расписание или нет"""
+        return Parser._bot_parsing
 
-    def _download_schedules(self):
+    @staticmethod
+    def download_schedules():
         """Скачивает актуальное расписание с сайта МИРЭА."""
+        Parser._bot_parsing = True
+        files_parsed = []
+        parse_all_files_anyway = False
+        number_of_tries = 3
+        if Parser._schedule_info is None:
+            Parser._schedule_info = Config.get_schedule_info()
         page = get("https://www.mirea.ru/schedule/")
         soup = BeautifulSoup(page.text, "html.parser")
         result = soup.find("div", {"class": "rasspisanie"}). \
@@ -43,36 +49,46 @@ class Parser:
 
         if any([i == 0 for i in tables_length]) and not all([i == 0 for i in tables_length]):
             print("Одна из таблиц 'Weeks', 'Days' или 'Subjects' оказалась пуста! Заполняем все снова!")
-            self._parse_all_files_anyway = True
-            InitSQL.get_DB().drop_tables([Weeks, Days, Subjects])
-            InitSQL.get_DB().create_tables([Weeks, Days, Subjects])
+            parse_all_files_anyway = True
+            InitSQL.get_DB().drop_tables([Weeks, Days, Subjects, Lesson_start_end])
+            InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Lesson_start_end])
 
         for x in result:
             if any([f"{i}к" in x["href"].lower() for i in range(1, 5)]) and "зач" not in x["href"].lower() \
                     and "экз" not in x["href"].lower():
-                req = get(x["href"])
-                if req.status_code == 200:
-                    md5_hash = md5(req.content).hexdigest()
-                    if self._schedule_info.get(x["href"], None) != md5_hash or self._parse_all_files_anyway:
-                        print(f"Бот парсит файл {x['href'].split('/')[-1]}")
-                        self._parse_table_to_DB(req.content)
-                        print(f"Бот пропарсил файл {x['href'].split('/')[-1]}")
-                        if not self._parsed_any_file:
-                            self._parsed_any_file = True
-                        self._schedule_info[x["href"]] = md5_hash
+                for _try in range(number_of_tries):
+                    req = get(x["href"])
+                    if req.status_code == 200:
+                        if _try != 0:
+                            files_parsed.pop()
+                        files_parsed.append(True)
+                        md5_hash = md5(req.content).hexdigest()
+                        if Parser._schedule_info.get(x["href"], None) != md5_hash or parse_all_files_anyway:
+                            print(f"Бот парсит файл {x['href'].split('/')[-1]}")
+                            Parser._parse_table_to_DB(req.content)
+                            print(f"Бот пропарсил файл {x['href'].split('/')[-1]}")
+                            Parser._schedule_info[x["href"]] = md5_hash
+                        else:
+                            print(f"Хеш файла {x['href'].split('/')[-1]} идентичен. Пропускаем...")
+                        break
                     else:
-                        print(f"Хеш файла {x['href'].split('/')[-1]} идентичен. Пропускаем...")
-                        if not self._parsed_any_file:
-                            self._parsed_any_file = True
-                else:
-                    print(f"Ошибка {req.status_code} при скачивании файла!")
-        if not self._parsed_any_file:
-            exit("Ни одного файла не удалось скачать! Сраные серваки МИРЭА...")
+                        if _try != 0:
+                            files_parsed.pop()
+                        files_parsed.append(False)
+                        print(f"Ошибка {req.status_code} при скачивании файла!" +
+                              (f' Осталось попыток - {str(number_of_tries - _try - 1)}'
+                               if (number_of_tries - _try - 1) != 0 else ''))
+        if not any(files_parsed):
+            print("Ни одного файла не удалось скачать! Сраные серваки МИРЭА...")
         else:
-            self._config.set_schedule_info(self._schedule_info)
-            self._config.save_config()
+            Config.set_schedule_info(Parser._schedule_info)
+            Config.save_config()
+        Parser._lesson_start_end_table_filled = False
+        Parser._bot_parsing = False
+        return all(files_parsed)
 
-    def _parse_table_to_DB(self, table_contents):
+    @staticmethod
+    def _parse_table_to_DB(table_contents):
         """Обработка скачанного расписания в базу данных."""
         book = open_workbook(file_contents=table_contents)
         sheet = book.sheet_by_index(0)
@@ -105,12 +121,12 @@ class Parser:
                     for lesson in range(6):
                         for evenness in range(2):
                             lesson_number = int(sheet.cell(3 + lesson * 2 + day * 12, 1).value)
-                            if not self._lesson_start_end_table_filled:
+                            if not Parser._lesson_start_end_table_filled:
                                 lesson_start_time = str(sheet.cell(3 + lesson * 2 + day * 12, 2).value)
                                 lesson_end_time = str(sheet.cell(3 + lesson * 2 + day * 12, 3).value)
                                 lesson_start_time = time(*map(int, lesson_start_time.split('-')))
                                 lesson_end_time = time(*map(int, lesson_end_time.split('-')))
-                                self._fill_lesson_start_end_table(lesson_number, lesson_start_time, lesson_end_time)
+                                Parser._fill_lesson_start_end_table(lesson_number, lesson_start_time, lesson_end_time)
 
                             subject = str(sheet.cell(3 + evenness + lesson * 2 + day * 12, col_index).value).strip()
                             lesson_type = str(sheet.cell(3 + evenness + lesson * 2 + day * 12, col_index + 1).value) \
@@ -132,7 +148,7 @@ class Parser:
                                 existing_records[evenness]["day_id"] = day_id
 
                                 subject_id = Days.get((Days.day_of_week_id == existing_records[evenness]["day_id"]) & (
-                                        Days.day_of_week == self._week_days[day])).subject_schedules_of_day_id
+                                        Days.day_of_week == Parser._week_days[day])).subject_schedules_of_day_id
                                 existing_records[evenness]["subject_id"] = subject_id
                             except DoesNotExist:
                                 existing_records[evenness]["day_id"] = None
@@ -170,12 +186,12 @@ class Parser:
 
                             if len([i for i in Days.select().where(
                                     (Days.day_of_week_id == existing_records[evenness]["day_id"]) &
-                                    (Days.day_of_week == self._week_days[day])).execute()]) == 0:
+                                    (Days.day_of_week == Parser._week_days[day])).execute()]) == 0:
                                 if len([i for i in Days.select().where(
                                         (Days.day_of_week_id == day_of_week_id) &
-                                        (Days.day_of_week == self._week_days[day])).execute()]) == 0:
+                                        (Days.day_of_week == Parser._week_days[day])).execute()]) == 0:
                                     Days.create(day_of_week_id=day_of_week_id,
-                                                day_of_week=self._week_days[day],
+                                                day_of_week=Parser._week_days[day],
                                                 subject_schedules_of_day_id=day_count + 1)
                                     day_count += 1
 
@@ -186,20 +202,23 @@ class Parser:
                                              days_of_group_id=group_count + 1)
                                 group_count += 1
 
-    def _fill_lesson_start_end_table(self, lesson_number: int, start_time: time, end_time: time):
+    @staticmethod
+    def _fill_lesson_start_end_table(lesson_number: int, start_time: time, end_time: time):
         """Заполнение таблицы 'Lesson_start_end' в базе данных"""
-        current_lessons = [i.lesson_number for i in Lesson_start_end.select().execute()]
-        if lesson_number not in current_lessons:
+        lesson_times = None
+        if [i for i in Lesson_start_end.select().where(Lesson_start_end.lesson_number == lesson_number).execute()] != 0:
+            lesson_times = Lesson_start_end.get(Lesson_start_end.lesson_number == lesson_number)
+        if lesson_times is None:
             Lesson_start_end.create(lesson_number=lesson_number, start_time=start_time, end_time=end_time)
-        if len(current_lessons) == 6:
-            self._lesson_start_end_table_filled = True
+        elif lesson_times.lesson_number != lesson_number or lesson_times.start_time != start_time or \
+                lesson_times.end_time != end_time:
+            lesson_times.lesson_number = lesson_number
+            lesson_times.start_time = start_time
+            lesson_times.end_time = end_time
+            lesson_times.save()
+        if lesson_number == 6:
+            Parser._lesson_start_end_table_filled = True
 
-
-# TODO:
-#  Создать отдельный поток в мэйне и проверять раз в день расписание с сайта с 5-ю траями если код красный)
-#  Мб ещё прикрутить работу со всеми институтами, это не сложно
-#  Конфиг класс можно сделать статическим.
-#  Разобраться с requests, надо ли добавлять в requirements, не ломает ли установку других зависимостей.
 
 if __name__ == '__main__':
     import time
@@ -222,7 +241,7 @@ if __name__ == '__main__':
 
     try:
         day_lesson = Weeks.get((Weeks.group == group) & (Weeks.even == True)).days_of_group_id  # Для единичной выцепки
-        # group = [i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).limit(1)][0].group  # Для множественной
+        # group = [i for i in Users_groups.select().where(Users_groups.user_id == Parser._user_id).limit(1)][0].group  # Для множественной
         # schedules_of_day = Days.get((Days.day_of_week_id == day_lesson) & (Days.day_of_week == "Понедельник")).subject_schedules_of_day_id
         schedules_of_day = [i.subject_schedules_of_day_id for i in Days.select(Days.subject_schedules_of_day_id).where(
             Days.day_of_week_id == day_lesson).execute()]

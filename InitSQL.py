@@ -21,7 +21,8 @@ class InitSQL:
     @staticmethod
     def _init_DB():
         """Инициализация соединения с базой данных и сохранение экземпляра"""
-        database_config = Config().get_database_info()
+        Config.read_config()
+        database_config = Config.get_database_info()
         tries = 0
         total_tries = 3
         while True:

@@ -246,9 +246,8 @@ class VkBotFunctions:
         """
         if len([i for i in Users_communities.select()
                 .where(Users_communities.user_id == self._user_id).limit(1).execute()]) != 0:
-            communities = [i for i in
+            communities = [i.community_id for i in
                            Users_communities.select().where(Users_communities.user_id == self._user_id).execute()]
-            communities = [i.community_id for i in communities]
             own_id = choice(communities)
         else:
             own_id = choice(self._300_communities)
@@ -323,9 +322,8 @@ class VkBotFunctions:
         communities = []
         if len([i for i in Users_communities.select()
                 .where(Users_communities.user_id == self._user_id).limit(1).execute()]) != 0:
-            communities = [i for i in
+            communities = [i.community_id for i in
                            Users_communities.select().where(Users_communities.user_id == self._user_id).execute()]
-            communities = [i.community_id for i in communities]
         vk = vk_session_user.get_api()
         communities_list = []
         if len(communities) > 0:

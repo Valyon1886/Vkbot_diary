@@ -47,13 +47,13 @@ class Weeks(BaseModel):
         table_name = 'Weeks'
 
 
-class Users(BaseModel):
+class Users_groups(BaseModel):
     """Таблица выбранных групп для каждого пользователя"""
     user_id = IntegerField(column_name='UserId')
     group = TextField(column_name='Group')
 
     class Meta:
-        table_name = 'Users'
+        table_name = 'Users_groups'
 
 
 class Users_notes(BaseModel):

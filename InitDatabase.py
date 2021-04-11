@@ -1,4 +1,4 @@
-from MySQLStorage import Weeks, Days, Subjects, Users, Users_notes, Lesson_start_end, Users_communities
+from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_notes, Lesson_start_end, Users_communities
 
 
 class InitDatabase:
@@ -12,14 +12,14 @@ class InitDatabase:
 
     @staticmethod
     def _ensure_users_added():
-        """Добавление начальных значений в таблицу 'Users'"""
+        """Добавление начальных значений в таблицу 'Users_groups'"""
         users_data = [
-            {'user_id': 283292203, 'group': "ИКБО-03-19"},
+            {'user_id': 283202201, 'group': "ИКБО-03-19"},
             {'user_id': 286251203, 'group': "ИКБО-06-19"},
             {'user_id': 248941603, 'group': "ИКБО-20-19"}
         ]
-        if len([i for i in Users.select().limit(1).execute()]) == 0:
-            Users.insert_many(users_data).execute()
+        if len([i for i in Users_groups.select().limit(1).execute()]) == 0:
+            Users_groups.insert_many(users_data).execute()
             print("Начальные значения добавлены в таблицу 'Users'!")
 
     @staticmethod

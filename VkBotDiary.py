@@ -7,22 +7,23 @@ from InitConfig import Config
 from VkBotParser import Parser
 from VkBotChat import VkBotChat
 from InitSQL import InitSQL
-from MySQLStorage import Weeks, Days, Subjects, Users, Users_notes, Lesson_start_end, Users_communities
+from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_notes, Lesson_start_end, Users_communities
 from InitDatabase import InitDatabase
 from SpeechRecognizer import SpeechRecognizer
 
 
 # TODO:
-#  1 Расписание (реализовано наполовину) 2. Пользователи/настройки (реализовано) 3. Заметки (to be continued)
+#  1. Расписание (реализовано, обновляется, но надо прикрутить отдельный поток обновления)
+#  2. Пользователи/настройки (реализовано)
+#  3. Заметки (to be continued)
 #  Добавление заметок (напротив предмета, см таблицу)
 #  Добавление своих пунктов в расписание (см таблицу)
-#  Обновление расписания в бд (с сохранением записей пользователя) !!!!!!!!!!!!!!!!!
 #  При парсинге расписания и заметок на день сортировать их в порядке возрастания времени начала как
 #                                                               в Things to practice/README.md и выводить в виде таблицы
 
 def ensure_tables_created():
     """Проверка, что таблицы созданы"""
-    InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Users,
+    InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Users_groups,
                                     Users_notes, Lesson_start_end, Users_communities])
 
 
@@ -34,7 +35,9 @@ def main():
     print("Соединение с базой данных установлено!")
     if config.get_init_database():
         InitDatabase.ensure_start_data_added()
+    print("Начинаем парсинг файлов расписания...")
     Parser(config)
+    print("Парсинг файлов расписания завершён!")
     vk_session = VkApi(token=config.get_token())
     print("Бот залогинился!")
     vk_session_user = None

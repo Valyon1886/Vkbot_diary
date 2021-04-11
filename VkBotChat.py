@@ -12,7 +12,7 @@ from peewee import DoesNotExist
 
 from VkBotFunctions import VkBotFunctions
 from VkBotStatus import States, VkBotStatus
-from MySQLStorage import Users, Weeks
+from MySQLStorage import Users_groups, Weeks
 
 
 class VkBotChat:
@@ -103,10 +103,10 @@ class VkBotChat:
 
             elif search(r'([а-я]{4}-\d{2}-\d{2})', user_message):
                 if len([i for i in Weeks.select().where(Weeks.group == user_message.upper()).execute()]) > 0:
-                    if len([i for i in Users.select().where(Users.user_id == self._user_id).execute()]) != 0:
-                        Users.update(group=user_message.upper()).where(Users.user_id == self._user_id).execute()
+                    if len([i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).execute()]) != 0:
+                        Users_groups.update(group=user_message.upper()).where(Users_groups.user_id == self._user_id).execute()
                     else:
-                        Users.create(user_id=self._user_id, group=user_message.upper())
+                        Users_groups.create(user_id=self._user_id, group=user_message.upper())
                     self.send_message(
                         message='Группа сохранена! Номер твоей группы: ' + user_message.upper())
                 else:
@@ -119,8 +119,8 @@ class VkBotChat:
 
             elif search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', user_message):
                 try:
-                    group = Users.get(Users.user_id == self._user_id).group  # Для единичной выцепки
-                    # group = [i for i in Users.select().where(Users.user_id == self._user_id).limit(1)][0].group
+                    group = Users_groups.get(Users_groups.user_id == self._user_id).group  # Для единичной выцепки
+                    # group = [i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).limit(1)][0].group
                     # Для множественной
                     self.send_message(self._functions.schedule_menu(user_message, group))
                 except DoesNotExist:  # and IndexError

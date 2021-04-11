@@ -1,6 +1,4 @@
 from re import search
-from os import remove
-from pathlib import Path
 from datetime import time
 from sys import exit
 from hashlib import md5
@@ -8,9 +6,10 @@ from hashlib import md5
 from xlrd import open_workbook
 from requests import get
 from bs4 import BeautifulSoup
-from peewee import fn
+from peewee import fn, DoesNotExist
 
 from InitConfig import Config
+from InitSQL import InitSQL
 from MySQLStorage import Weeks, Days, Subjects, Lesson_start_end
 
 
@@ -19,10 +18,10 @@ class Parser:
     _week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
     _lesson_start_end_table_filled = False
     _parsed_any_file = False
+    _parse_all_files_anyway = False
 
     def __init__(self, config: Config):
         self._config = config
-        self._dir_name = self._config.get_dir_name()
         self._schedule_info = self._config.get_schedule_info()
         self._download_schedules()
 
@@ -35,39 +34,62 @@ class Parser:
             find_parent("div"). \
             find_parent("div"). \
             findAll("a", {"class": "uk-link-toggle"})
+
+        tables_length = [
+            len([i for i in Weeks.select().limit(1).execute()]),
+            len([i for i in Days.select().limit(1).execute()]),
+            len([i for i in Subjects.select().limit(1).execute()])
+        ]
+
+        if any([i == 0 for i in tables_length]) and not all([i == 0 for i in tables_length]):
+            print("Одна из таблиц 'Weeks', 'Days' или 'Subjects' оказалась пуста! Заполняем все снова!")
+            self._parse_all_files_anyway = True
+            InitSQL.get_DB().drop_tables([Weeks, Days, Subjects])
+            InitSQL.get_DB().create_tables([Weeks, Days, Subjects])
+
         for x in result:
-            for i in range(1, 5):
-                if f"{i}к" in x["href"].lower() and "зач" not in x["href"].lower() and "экз" not in x["href"].lower():
-                    req = get(x["href"])
-                    if req.status_code == 200:
-                        md5_hash = md5(req.content).hexdigest()
-                        if self._schedule_info.get(x["href"], None) != md5_hash:
-                            with open(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"), "wb") as f:
-                                f.write(req.content)
-                            self._parse_table_DB(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"))
-                            print(f"Бот пропарсил расписание {x['href'].split('/')[-1]}")
-                            if not self._parsed_any_file:
-                                self._parsed_any_file = True
-                            self._schedule_info[x["href"]] = md5_hash
-                            remove(Path(self._dir_name + f"/schedule-{str(i)}k.xlsx"))
-                        else:
-                            if not self._parsed_any_file:
-                                self._parsed_any_file = True
+            if any([f"{i}к" in x["href"].lower() for i in range(1, 5)]) and "зач" not in x["href"].lower() \
+                    and "экз" not in x["href"].lower():
+                req = get(x["href"])
+                if req.status_code == 200:
+                    md5_hash = md5(req.content).hexdigest()
+                    if self._schedule_info.get(x["href"], None) != md5_hash or self._parse_all_files_anyway:
+                        print(f"Бот парсит файл {x['href'].split('/')[-1]}")
+                        self._parse_table_to_DB(req.content)
+                        print(f"Бот пропарсил файл {x['href'].split('/')[-1]}")
+                        if not self._parsed_any_file:
+                            self._parsed_any_file = True
+                        self._schedule_info[x["href"]] = md5_hash
                     else:
-                        print(f"Ошибка {req.status_code} при скачивании файла!")
+                        print(f"Хеш файла {x['href'].split('/')[-1]} идентичен. Пропускаем...")
+                        if not self._parsed_any_file:
+                            self._parsed_any_file = True
+                else:
+                    print(f"Ошибка {req.status_code} при скачивании файла!")
         if not self._parsed_any_file:
             exit("Ни одного файла не удалось скачать! Сраные серваки МИРЭА...")
         else:
             self._config.set_schedule_info(self._schedule_info)
             self._config.save_config()
 
-    def _parse_table_DB(self, table):
+    def _parse_table_to_DB(self, table_contents):
         """Обработка скачанного расписания в базу данных."""
-        book = open_workbook(table)
+        book = open_workbook(file_contents=table_contents)
         sheet = book.sheet_by_index(0)
         num_cols = sheet.ncols
         group_count = -1
         day_count = -1
+
+        existing_records = [
+            {
+                "day_id": None,
+                "subject_id": None
+            },
+            {
+                "day_id": None,
+                "subject_id": None
+            }
+        ]
 
         group_max_count = Weeks.select(fn.MAX(Weeks.days_of_group_id)).scalar()
         if group_max_count is not None and group_max_count > 0:
@@ -103,28 +125,62 @@ class Parser:
                                     group_count - int(not bool(evenness)))
                             schedule_of_subject_id = (day_count + 1) if lesson == 0 else (
                                     day_count - int(not bool(evenness)))
-                            # print(f"{lesson_number} {bool(evenness)} - id {schedule_of_subject_id}")
-                            Subjects.create(schedule_of_subject_id=schedule_of_subject_id,
-                                            lesson_number=lesson_number,
-                                            subject=subject,
-                                            lesson_type=lesson_type,
-                                            teacher=lecturer,
-                                            class_number=classroom,
-                                            link=url)
 
-                            if len([i for i in Days.select().where((Days.day_of_week_id == day_of_week_id) & (
-                                    Days.day_of_week == self._week_days[day])).execute()]) == 0:
-                                # print(f"{self._week_days[day]} {bool(evenness)} - id "f
-                                # "{(group_count + 1) if lesson == 0 and day == 0 else (group_count - int(not bool(evenness)))}")
-                                Days.create(day_of_week_id=day_of_week_id,
-                                            day_of_week=self._week_days[day],
-                                            subject_schedules_of_day_id=day_count + 1)
-                                day_count += 1
+                            try:
+                                day_id = Weeks.get(
+                                    (Weeks.group == group_cell) & (Weeks.even == bool(evenness))).days_of_group_id
+                                existing_records[evenness]["day_id"] = day_id
+
+                                subject_id = Days.get((Days.day_of_week_id == existing_records[evenness]["day_id"]) & (
+                                        Days.day_of_week == self._week_days[day])).subject_schedules_of_day_id
+                                existing_records[evenness]["subject_id"] = subject_id
+                            except DoesNotExist:
+                                existing_records[evenness]["day_id"] = None
+                                existing_records[evenness]["subject_id"] = None
+
+                            if len([i for i in Subjects.select().where(
+                                    (Subjects.schedule_of_subject_id == existing_records[evenness]["subject_id"]) &
+                                    (Subjects.lesson_number == lesson_number)).execute()]) == 0:
+                                # print("Создаём " +
+                                #       ', '.join([str(lesson_number), subject, lesson_type, lecturer, classroom, url])
+                                #       + f" в subject_id {str(schedule_of_subject_id)}")
+                                Subjects.create(schedule_of_subject_id=schedule_of_subject_id,
+                                                lesson_number=lesson_number,
+                                                subject=subject,
+                                                lesson_type=lesson_type,
+                                                teacher=lecturer,
+                                                class_number=classroom,
+                                                link=url)
+                            else:
+                                s = Subjects.get(
+                                    (Subjects.schedule_of_subject_id == existing_records[evenness]["subject_id"]) &
+                                    (Subjects.lesson_number == lesson_number))
+                                if s.subject != subject or s.lesson_type != lesson_type or s.teacher != lecturer or \
+                                        s.class_number != classroom or s.link != url:
+                                    # print(f"Обновляем " +
+                                    #       ', '.join(
+                                    #           [str(lesson_number), subject, lesson_type, lecturer, classroom, url])
+                                    #       + " в subject_id {str(existing_records[evenness]['subject_id'])}")
+                                    s.subject = subject
+                                    s.lesson_type = lesson_type
+                                    s.teacher = lecturer
+                                    s.class_number = classroom
+                                    s.link = url
+                                    s.save()
+
+                            if len([i for i in Days.select().where(
+                                    (Days.day_of_week_id == existing_records[evenness]["day_id"]) &
+                                    (Days.day_of_week == self._week_days[day])).execute()]) == 0:
+                                if len([i for i in Days.select().where(
+                                        (Days.day_of_week_id == day_of_week_id) &
+                                        (Days.day_of_week == self._week_days[day])).execute()]) == 0:
+                                    Days.create(day_of_week_id=day_of_week_id,
+                                                day_of_week=self._week_days[day],
+                                                subject_schedules_of_day_id=day_count + 1)
+                                    day_count += 1
 
                             if len([i for i in Weeks.select().where(
                                     (Weeks.group == group_cell) & (Weeks.even == bool(evenness))).execute()]) == 0:
-                                # print(group_cell, f"Чётная: {bool(evenness)}",
-                                # str((group_count - evenness) if lesson != 0 else (group_count + 1)), sep=" || ")
                                 Weeks.create(group=group_cell,
                                              even=bool(evenness),
                                              days_of_group_id=group_count + 1)
@@ -139,16 +195,14 @@ class Parser:
             self._lesson_start_end_table_filled = True
 
 
-# TODO: Добавить проверку если 1 файл, то обновлять!!! строки в "Subjects", получая их по запросам из "Weeks" и "Days".
-#  Также проверку, если одна из таблиц пуста - дропать и создавать снова 3 таблицы и заполнять).
+# TODO:
+#  Создать отдельный поток в мэйне и проверять раз в день расписание с сайта с 5-ю траями если код красный)
 #  Мб ещё прикрутить работу со всеми институтами, это не сложно
-#  и мб уже переписать этот for i in range(1, 5) на 39 строчке.
 #  Конфиг класс можно сделать статическим.
 #  Разобраться с requests, надо ли добавлять в requirements, не ломает ли установку других зависимостей.
 
 if __name__ == '__main__':
     import time
-    from peewee import DoesNotExist
 
     group = "ИКБО-03-19"
     # Weeks.create(group=group,
@@ -168,7 +222,7 @@ if __name__ == '__main__':
 
     try:
         day_lesson = Weeks.get((Weeks.group == group) & (Weeks.even == True)).days_of_group_id  # Для единичной выцепки
-        # group = [i for i in Users.select().where(Users.user_id == self._user_id).limit(1)][0].group  # Для множественной
+        # group = [i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).limit(1)][0].group  # Для множественной
         # schedules_of_day = Days.get((Days.day_of_week_id == day_lesson) & (Days.day_of_week == "Понедельник")).subject_schedules_of_day_id
         schedules_of_day = [i.subject_schedules_of_day_id for i in Days.select(Days.subject_schedules_of_day_id).where(
             Days.day_of_week_id == day_lesson).execute()]

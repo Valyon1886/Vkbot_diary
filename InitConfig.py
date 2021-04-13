@@ -3,7 +3,7 @@ from os.path import isfile, exists
 from pathlib import Path
 from json import dump, load
 
-from colorama import Fore, Style
+from colorama import Fore, Style, init as c_init
 
 
 class Config:
@@ -15,6 +15,7 @@ class Config:
     @staticmethod
     def read_config():
         """Создаёт файл конфигурации (если нету) и загружает его в память."""
+        c_init()
         file_exists = False
         if not exists(Config._dir_name):
             makedirs(Config._dir_name)

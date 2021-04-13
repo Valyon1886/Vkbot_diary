@@ -1,6 +1,5 @@
 @ECHO OFF
 chcp 65001
-cls
 :build
 pyinstaller -F --icon=bot.ico --distpath=./build_dist --name=VkBot_Diary.exe VkBotDiary.py
 echo Собрано

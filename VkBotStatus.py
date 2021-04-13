@@ -12,7 +12,9 @@ class States(Enum):
     DELETE_TASK_HAS_DATE = auto()
     CHANGE_TASK_INIT = auto()
     CHANGE_TASK_HAS_DATE = auto()
+    CHANGE_TASK_CHOOSE = auto()
     CHANGE_TASK_ENTER_DATA = auto()
+    CHANGE_TASK_ENTER_TIME = auto()
 
 
 class VkBotStatus:

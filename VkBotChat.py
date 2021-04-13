@@ -53,7 +53,7 @@ class VkBotChat:
         elif VkBotStatus.get_state(self._user_id) != States.ADD_COMMUNITY and \
                 VkBotStatus.get_state(self._user_id) != States.DELETE_COMMUNITY and \
                 VkBotStatus.get_state(self._user_id) != States.NONE:
-            self._handle_add_delete_change_note(user_message)
+            self._handle_add_delete_change_task(user_message)
         else:
             user_message = user_message.lower()
             if user_message == 'начать':
@@ -97,18 +97,18 @@ class VkBotChat:
                 self.send_message(message='Выбери возможность', keyboard=keyboard)
 
             elif user_message == 'добавить задачу':
-                bot_message = "Формат даты ввода для заметки с какого и по какое время:\n" + \
+                bot_message = "Формат даты ввода для задачи с какого и по какое время:\n" + \
                               "'1 января 1970 года 01:00 - 02:24' или 'завтра 12:10 - 14:40'"
                 VkBotStatus.set_state(self._user_id, States.ADD_TASK_INIT)
                 self._create_cancel_menu(message=bot_message, add_to_existing=True)
 
             elif user_message == 'удалить задачу':
                 VkBotStatus.set_state(self._user_id, States.DELETE_TASK_INIT)
-                self._create_cancel_menu(message="Введите дату начала удаляемой заметки", add_to_existing=True)
+                self._create_cancel_menu(message="Введите дату начала удаляемой задачи", add_to_existing=True)
 
             elif user_message == 'изменить задачу':
                 VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_INIT)
-                self._create_cancel_menu(message="Введите дату начала изменяемой заметки", add_to_existing=True)
+                self._create_cancel_menu(message="Введите дату начала изменяемой задачи", add_to_existing=True)
 
             elif user_message == 'мем':
                 self._flag = False
@@ -271,7 +271,7 @@ class VkBotChat:
                         bot_message = "Неправильно указаны ссылки на сообщества!"
                     self._create_cancel_menu(message=bot_message)
 
-    def _handle_add_delete_change_note(self, user_message: str):
+    def _handle_add_delete_change_task(self, user_message: str):
         """Обрабатывает запрос пользователя на добавление, удаление или изменение задачи или задач.
 
         Parameters
@@ -283,7 +283,8 @@ class VkBotChat:
             VkBotStatus.set_state(self._user_id, States.NONE)
             self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
         else:
-            if VkBotStatus.get_state(self._user_id) == States.ADD_TASK_INIT:
+            if VkBotStatus.get_state(self._user_id) == States.ADD_TASK_INIT or \
+                    VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_ENTER_TIME:
                 try:
                     if '-' not in user_message:
                         raise ValueError
@@ -293,20 +294,27 @@ class VkBotChat:
                     dates[1] = datetime.combine(dates[0], dates[1].time())
 
                     existing_tasks = [i for i in Users_tasks.select().where((Users_tasks.user_id == self._user_id) &
-                                                                            (((Users_tasks.start_date <= dates[0]) &
-                                                                              (Users_tasks.end_date >= dates[0])) |
-                                                                             ((Users_tasks.start_date <= dates[1]) &
-                                                                              (Users_tasks.end_date >= dates[1])) |
-                                                                             ((Users_tasks.start_date >= dates[0]) &
-                                                                              (Users_tasks.end_date >= dates[0]) &
-                                                                              (Users_tasks.start_date <= dates[1]) &
-                                                                              (Users_tasks.end_date <= dates[1]))))
+                                                                            (((Users_tasks.start_date < dates[0]) &
+                                                                              (Users_tasks.end_date > dates[0])) |
+                                                                             ((Users_tasks.start_date < dates[1]) &
+                                                                              (Users_tasks.end_date > dates[1])) |
+                                                                             ((Users_tasks.start_date > dates[0]) &
+                                                                              (Users_tasks.end_date > dates[0]) &
+                                                                              (Users_tasks.start_date < dates[1]) &
+                                                                              (Users_tasks.end_date < dates[1]))))
                                                                      .execute()]
 
                     if len(existing_tasks) == 0:
-                        VkBotStatus.set_state(self._user_id, States.ADD_TASK_HAS_DATE, dates)
+                        if VkBotStatus.get_state(self._user_id) == States.ADD_TASK_INIT:
+                            VkBotStatus.set_state(self._user_id, States.ADD_TASK_HAS_DATE, dates)
+                        else:
+                            VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_ENTER_DATA,
+                                                  [VkBotStatus.get_data(self._user_id), dates])
+                        self.send_message("Период задачи поставлен на дату " + dates[0].strftime('%d.%m.%Y с %H:%M') +
+                                          dates[1].strftime(' по %H:%M'))
                         self._create_cancel_menu(message="Введите задачу...")
                     else:
+                        existing_tasks.sort(key=lambda x: x.start_date.time())
                         bot_message = "\n".join([f"{i + 1}) {existing_tasks[i].start_date.time().strftime('%H:%M')} "
                                                  f"- {existing_tasks[i].end_date.time().strftime('%H:%M')}: "
                                                  f"{existing_tasks[i].task}"
@@ -319,7 +327,6 @@ class VkBotChat:
                             buttons=len(existing_tasks),
                             list_of_named_buttons=[i.start_date.time().strftime('%H:%M') for i in existing_tasks])
                         VkBotStatus.set_state(self._user_id, States.DELETE_TASK_HAS_DATE, dates[0])
-                        # Добавить доп меню спрашивать удалять такую задачу или нет
                 except ValueError:
                     self._create_cancel_menu(
                         message="Дата указана неверно, бот не смог её распарсить. Попробуйте ещё раз.")
@@ -334,8 +341,14 @@ class VkBotChat:
                                            task=user_message.strip())
                         self.send_message(message="Задача сохранена!")
                     else:
-                        date_to_update = Users_tasks.get((Users_tasks.user_id == self._user_id) &
-                                                         (Users_tasks.start_date == dates))
+                        if isinstance(VkBotStatus.get_data(self._user_id), list):
+                            date_to_update = Users_tasks.get((Users_tasks.user_id == self._user_id) &
+                                                             (Users_tasks.start_date == dates[0]))
+                            date_to_update.start_date = VkBotStatus.get_data(self._user_id)[1][0]
+                            date_to_update.end_date = VkBotStatus.get_data(self._user_id)[1][1]
+                        else:
+                            date_to_update = Users_tasks.get((Users_tasks.user_id == self._user_id) &
+                                                             (Users_tasks.start_date == dates))
                         date_to_update.task = user_message.strip()
                         date_to_update.save()
                         self.send_message(message="Задача обновлена!")
@@ -343,7 +356,7 @@ class VkBotChat:
                 else:
                     self._create_cancel_menu(
                         message="Задачу не удалось сохранить, так как пользователь ничего не ввёл." +
-                                " Введите заметку ещё раз.")
+                                " Введите задачу ещё раз.")
             elif VkBotStatus.get_state(self._user_id) == States.DELETE_TASK_INIT or \
                     VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_INIT:
                 try:
@@ -364,6 +377,7 @@ class VkBotChat:
                     if len(dates) == 0:
                         self.send_message(message="Задач на эту дату не существует.")
                     else:
+                        dates.sort(key=lambda x: x.start_date.time())
                         list_of_tasks = "\n".join([f"{i + 1}) {dates[i].start_date.time().strftime('%H:%M')} "
                                                    f"- {dates[i].end_date.time().strftime('%H:%M')}: {dates[i].task}"
                                                    for i in range(len(dates))])
@@ -394,8 +408,11 @@ class VkBotChat:
                             Users_tasks.delete().where((Users_tasks.user_id == self._user_id) &
                                                        (Users_tasks.start_date << parsed_user_dates)).execute()
                         else:
-                            self._create_cancel_menu(message="Введите задачу...")
-                            VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_ENTER_DATA, parsed_user_dates[0])
+                            self._create_cancel_menu(message="Что вы хотите изменить в задаче?"
+                                                             "\n1) Всю задачу время начала и конца и текст задачи"
+                                                             "\n2) Только текст задачи",
+                                                     buttons=2)
+                            VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_CHOOSE, parsed_user_dates[0])
                             return
                     else:
                         self._create_cancel_menu(
@@ -412,7 +429,19 @@ class VkBotChat:
                                 ", так как пользователь ничего не ввёл." +
                                 " Введите дату или даты ещё раз.")
                 VkBotStatus.set_state(self._user_id, States.NONE)
-            # elif VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_ENTER_DATA:
-            #
-            #     VkBotStatus.set_state(self._user_id, States.NONE)
-            #     pass
+            elif VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_CHOOSE:
+                try:
+                    if int(user_message) == 1:
+                        bot_message = "Формат даты ввода для задачи с какого и по какое время:\n" + \
+                                      "'1 января 1970 года 01:00 - 02:24' или 'завтра 12:10 - 14:40'"
+                        VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_ENTER_TIME,
+                                              VkBotStatus.get_data(self._user_id))
+                        self._create_cancel_menu(message=bot_message)
+                    elif int(user_message) == 2:
+                        self._create_cancel_menu(message="Введите задачу...")
+                        VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_ENTER_DATA,
+                                              VkBotStatus.get_data(self._user_id))
+                    else:
+                        self._create_cancel_menu(message="Такой цифры нет в списке!", buttons=2)
+                except ValueError:
+                    self._create_cancel_menu(message="Неправильный ввод, выберите из списка вариант!", buttons=2)

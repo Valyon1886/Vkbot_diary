@@ -30,8 +30,11 @@ class Config:
     @staticmethod
     def save_config():
         """Сохраняет файл конфигурации"""
-        with open(file=Path(Config._dir_name + '/' + Config._config_name), mode="w", encoding="utf-8") as config_file:
-            dump(Config._config_dict, config_file, indent=2)
+        try:
+            with open(file=Path(Config._dir_name + '/' + Config._config_name), mode="w", encoding="utf-8") as conf_file:
+                dump(Config._config_dict, conf_file, indent=2)
+        except FileNotFoundError:
+            Config.save_config()
 
     @staticmethod
     def get_dir_name() -> str:

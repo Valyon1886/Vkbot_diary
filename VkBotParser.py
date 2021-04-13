@@ -66,11 +66,12 @@ class Parser:
                             files_parsed.pop()
                         files_parsed.append(True)
                         md5_hash = md5(req.content).hexdigest()
-                        if Parser._schedule_info.get(x["href"], None) != md5_hash or parse_all_files_anyway:
+                        if Parser._schedule_info.get(x['href'].split('/')[-1], None) != md5_hash or \
+                                parse_all_files_anyway:
                             print(Fore.LIGHTGREEN_EX + f"Бот парсит файл {x['href'].split('/')[-1]}" + Style.RESET_ALL)
                             Parser._parse_table_to_DB(req.content)
                             print(Fore.GREEN + f"Бот пропарсил файл {x['href'].split('/')[-1]}" + Style.RESET_ALL)
-                            Parser._schedule_info[x["href"]] = md5_hash
+                            Parser._schedule_info[x['href'].split('/')[-1]] = md5_hash
                         else:
                             print(Fore.GREEN +
                                   f"Хеш файла {x['href'].split('/')[-1]} идентичен. Пропускаем..." + Style.RESET_ALL)

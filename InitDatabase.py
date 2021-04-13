@@ -1,4 +1,4 @@
-from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_notes, Lesson_start_end, Users_communities
+from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_tasks, Lesson_start_end, Users_communities
 
 
 class InitDatabase:

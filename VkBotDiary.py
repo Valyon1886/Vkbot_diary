@@ -10,25 +10,26 @@ from InitConfig import Config
 from VkBotParser import Parser
 from VkBotChat import VkBotChat
 from InitSQL import InitSQL
-from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_notes, Lesson_start_end, Users_communities
+from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_tasks, Lesson_start_end, Users_communities
 from InitDatabase import InitDatabase
 from SpeechRecognizer import SpeechRecognizer
 
 
 # TODO:
-#  1. Расписание (реализовано, обновляется, но надо прикрутить отдельный поток обновления)
+#  1. Расписание (реализовано)
 #  2. Пользователи/настройки (реализовано)
-#  3. Заметки (to be continued)
-#  Добавление заметок (напротив предмета, см таблицу)
+#  3. Задачи (реализованы, но в расписании не выводятся)
 #  Добавление своих пунктов в расписание (см таблицу)
 #  При парсинге расписания и заметок на день сортировать их в порядке возрастания времени начала как
 #                                                               в Things to practice/README.md и выводить в виде таблицы
 #  Мб ещё прикрутить работу со всеми институтами, это не сложно
+#  Добавить в ответы бота смайлики, Серёге надо)
+#  tab = "&#8194;" * 4
 
 def ensure_tables_created():
     """Проверка, что таблицы созданы"""
     InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Users_groups,
-                                    Users_notes, Lesson_start_end, Users_communities])
+                                    Users_tasks, Lesson_start_end, Users_communities])
 
 
 def checking_schedule_on_changes():
@@ -67,7 +68,7 @@ def main():
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and (
                 event.text or "attach1_kind" in event.attachments) and event.to_me:
-            user_message = event.text.lower()
+            user_message = event.text
             if "attach1_kind" in event.attachments and event.attachments["attach1_kind"] == 'audiomsg':
                 attachs = eval(event.attachments["attachments"])
                 user_message = SpeechRecognizer.get_phrase(attachs[0]['audio_message']['link_mp3']).lower()

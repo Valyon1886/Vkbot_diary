@@ -42,7 +42,7 @@ class VkBotFunctions:
         self._user_id = user_id
 
     @staticmethod
-    def create_menu(user_message: str, buttons=0):
+    def create_menu(user_message: str, buttons=0, list_of_named_buttons=None):
         """Создание клавиатуры на основе запроса пользователя.
 
         Parameters
@@ -55,16 +55,16 @@ class VkBotFunctions:
         ----------
         keyboard: VkKeyboard
             клавиатура с командами
-
+        list_of_named_buttons : list
+            список названий кнопок
         """
         keyboard = VkKeyboard(one_time=True)
 
         if user_message == 'Продолжить':
             keyboard.add_button('Расписание', color=VkKeyboardColor.PRIMARY)
-            keyboard.add_button('Мем')
+            keyboard.add_button('Задачи', color=VkKeyboardColor.POSITIVE)
             keyboard.add_line()
-            keyboard.add_button('Добавить задачу', color=VkKeyboardColor.POSITIVE)
-            keyboard.add_button('Изменить задачу', color=VkKeyboardColor.NEGATIVE)
+            keyboard.add_button('Мем')
 
         if user_message == 'расписание':
             keyboard.add_button('На сегодня', color=VkKeyboardColor.POSITIVE)
@@ -84,6 +84,12 @@ class VkBotFunctions:
             keyboard.add_line()
             keyboard.add_button('Мои сообщества')
 
+        if user_message == 'задачи':
+            keyboard.add_button('Добавить задачу', color=VkKeyboardColor.POSITIVE)
+            keyboard.add_button('Удалить задачу', color=VkKeyboardColor.NEGATIVE)
+            keyboard.add_line()
+            keyboard.add_button('Изменить задачу', color=VkKeyboardColor.PRIMARY)
+
         if user_message == 'клавиатура--отмена':
             if buttons != 0:
                 buttons_in_row = None
@@ -96,8 +102,15 @@ class VkBotFunctions:
                         buttons_in_row = len(stages) - 1
                         break
                 buttons = buttons if buttons < stages[-1] else stages[-1] - 1
+                if list_of_named_buttons is not None:
+                    list_of_named_buttons = list_of_named_buttons \
+                        if len(list_of_named_buttons) < stages[-1] \
+                        else list_of_named_buttons[:stages[-1] - 1]
                 for i in range(buttons):
-                    keyboard.add_button(str(i + 1))
+                    if list_of_named_buttons is None:
+                        keyboard.add_button(str(i + 1))
+                    else:
+                        keyboard.add_button(list_of_named_buttons[i])
                     if ((i + 1) % buttons_in_row == 0 and i != 0) or i + 1 == buttons or buttons_in_row == 1:
                         keyboard.add_line()
             keyboard.add_button('Отмена', color=VkKeyboardColor.NEGATIVE)

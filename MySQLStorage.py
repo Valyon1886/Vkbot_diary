@@ -56,16 +56,15 @@ class Users_groups(BaseModel):
         table_name = 'Users_groups'
 
 
-class Users_notes(BaseModel):
-    """Таблица заметок для каждого пользователя на выбранные даты"""
+class Users_tasks(BaseModel):
+    """Таблица задач для каждого пользователя на выбранные даты"""
     user_id = IntegerField(column_name='UserId')
     start_date = DateTimeField(column_name='StartDate')
     end_date = DateTimeField(column_name='EndDate')
-    note = TextField(column_name='Note', null=True)
-    task = TextField(column_name='Task', null=True)
+    task = TextField(column_name='Task')
 
     class Meta:
-        table_name = 'Users_notes'
+        table_name = 'Users_tasks'
 
 
 class Lesson_start_end(BaseModel):

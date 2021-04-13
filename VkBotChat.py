@@ -9,10 +9,12 @@ from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
 from vk_api.exceptions import ApiError
 from peewee import DoesNotExist
+from datetime import datetime
+from dateparser import parse as date_parse
 
 from VkBotFunctions import VkBotFunctions
 from VkBotStatus import States, VkBotStatus
-from MySQLStorage import Users_groups, Weeks
+from MySQLStorage import Users_groups, Weeks, Users_tasks
 from VkBotParser import Parser
 
 
@@ -44,68 +46,26 @@ class VkBotChat:
         user_message : str
             сообщение пользователя
         """
-        if VkBotStatus.get_state(self._user_id) != States.NONE:
-            if user_message == 'отмена':
-                VkBotStatus.set_state(self._user_id, States.NONE)
-                self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
-            else:
-                communities_links = [i.strip() for i in re_split(', | |\n', user_message)]
-
-                communities_names = []
-                for i in communities_links:
-                    if search(r'(?:(?:https?|ftp|http?)://)?[\w/\-?=%.]+\.[\w/\-&?=%.]+', i):
-                        communities_names.append(str(findall(r'(?:(?:https?|ftp|http?)://)?[\w/\-?=%.]+\.[\w/\-&?=%.]+',
-                                                             i)[0]).split("/")[-1])
-                communities_numbers = []
-                if VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY and len(communities_names) == 0:
-                    for i in communities_links:
-                        try:
-                            if int(i) - 1 >= 0:
-                                communities_numbers.append(int(i) - 1)
-                        except ValueError:
-                            pass
-                    if len(communities_numbers) != 0:
-                        comm_from_me, list_comm_urls = self._functions.show_users_communities(self._vk_session_user,
-                                                                                              show_url=True)
-                        if comm_from_me:
-                            for i in communities_numbers:
-                                if i < len(list_comm_urls):
-                                    communities_names.append(list_comm_urls[i].split("/")[-1])
-
-                if len(communities_names) == 0 and len(communities_numbers) == 0:
-                    self._flag = False
-                    keyboard = self._functions.create_menu("клавиатура--отмена")
-                    self.send_message(message="Ссылки на сообщество" +
-                                              (' или его номера' if VkBotStatus.get_state(
-                                                  self._user_id) == States.DELETE_COMMUNITY else '') +
-                                              " не найдено!", keyboard=keyboard)
-                else:
-                    try:
-                        result = self._functions.change_users_community(self._vk_session_user,
-                                                                        VkBotStatus.get_state(
-                                                                            self._user_id) == States.DELETE_COMMUNITY,
-                                                                        communities_names)
-                        VkBotStatus.set_state(self._user_id, States.NONE)
-                        if len(communities_names) == 1:
-                            self.send_message(message=f"Сообщество {'удалено' if result else 'сохранено'}!")
-                        else:
-                            self.send_message(message=f"Сообщества {'удалены' if result else 'сохранены'}!")
-                    except ApiError:
-                        self._flag = False
-                        keyboard = self._functions.create_menu("клавиатура--отмена")
-                        if len(communities_names) == 1:
-                            self.send_message(message="Неправильно указана ссылка на сообщество!", keyboard=keyboard)
-                        else:
-                            self.send_message(message="Неправильно указаны ссылки на сообщества!", keyboard=keyboard)
+        if VkBotStatus.get_state(self._user_id) == States.ADD_COMMUNITY or \
+                VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY:
+            user_message = user_message.lower()
+            self._handle_add_delete_community(user_message)
+        elif VkBotStatus.get_state(self._user_id) != States.ADD_COMMUNITY and \
+                VkBotStatus.get_state(self._user_id) != States.DELETE_COMMUNITY and \
+                VkBotStatus.get_state(self._user_id) != States.NONE:
+            self._handle_add_delete_change_note(user_message)
         else:
+            user_message = user_message.lower()
             if user_message == 'начать':
                 self.send_message(message='Привет, чтобы открыть все возможности бота напиши свою группу'
                                           '\nФорма записи группы: ИКБО-03-19.')
 
             elif search(r'([а-я]{4}-\d{2}-\d{2})', user_message):
                 if len([i for i in Weeks.select().where(Weeks.group == user_message.upper()).execute()]) > 0:
-                    if len([i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).execute()]) != 0:
-                        Users_groups.update(group=user_message.upper()).where(Users_groups.user_id == self._user_id).execute()
+                    if len([i for i in
+                            Users_groups.select().where(Users_groups.user_id == self._user_id).execute()]) != 0:
+                        Users_groups.update(group=user_message.upper()).where(
+                            Users_groups.user_id == self._user_id).execute()
                     else:
                         Users_groups.create(user_id=self._user_id, group=user_message.upper())
                     self.send_message(
@@ -130,10 +90,31 @@ class VkBotChat:
                         self.send_message(self._functions.schedule_menu(user_message, group))
                     except DoesNotExist:  # and IndexError
                         self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19.')
+
+            elif user_message == 'задачи':
+                self._flag = False
+                keyboard = self._functions.create_menu(user_message)
+                self.send_message(message='Выбери возможность', keyboard=keyboard)
+
+            elif user_message == 'добавить задачу':
+                bot_message = "Формат даты ввода для заметки с какого и по какое время:\n" + \
+                              "'1 января 1970 года 01:00 - 02:24' или 'завтра 12:10 - 14:40'"
+                VkBotStatus.set_state(self._user_id, States.ADD_TASK_INIT)
+                self._create_cancel_menu(message=bot_message, add_to_existing=True)
+
+            elif user_message == 'удалить задачу':
+                VkBotStatus.set_state(self._user_id, States.DELETE_TASK_INIT)
+                self._create_cancel_menu(message="Введите дату начала удаляемой заметки", add_to_existing=True)
+
+            elif user_message == 'изменить задачу':
+                VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_INIT)
+                self._create_cancel_menu(message="Введите дату начала изменяемой заметки", add_to_existing=True)
+
             elif user_message == 'мем':
                 self._flag = False
                 keyboard = self._functions.create_menu(user_message)
                 self.send_message(message='Выбери возможность', keyboard=keyboard)
+
             elif user_message == 'случайный мем':
                 if self._vk_session_user is None:
                     self.send_pic(
@@ -152,11 +133,8 @@ class VkBotChat:
                         self.send_message("Я бы мог рассказать что-то, но мне лень. ( ͡° ͜ʖ ͡°)")
 
             elif user_message == 'добавить сообщество':
-                self._flag = False
                 VkBotStatus.set_state(self._user_id, States.ADD_COMMUNITY)
-                keyboard = self._functions.create_menu("клавиатура--отмена")
-                self.send_message(message=f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)",
-                                  keyboard=keyboard)
+                self._create_cancel_menu(add_to_existing=True)
 
             elif user_message == 'удалить сообщество':
                 comm_from_me, list_comm_urls = self._functions.show_users_communities(self._vk_session_user,
@@ -164,12 +142,8 @@ class VkBotChat:
                 if comm_from_me:
                     bot_message = "\nТекущие сообщества:\n" + \
                                   "\n".join([f"{str(i + 1)}) {list_comm_urls[i]}" for i in range(len(list_comm_urls))])
-                    self._flag = False
                     VkBotStatus.set_state(self._user_id, States.DELETE_COMMUNITY)
-                    keyboard = self._functions.create_menu("клавиатура--отмена", len(list_comm_urls))
-                    self.send_message(message=f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)" +
-                                              bot_message,
-                                      keyboard=keyboard)
+                    self._create_cancel_menu(message=bot_message, buttons=len(list_comm_urls), add_to_existing=True)
                 else:
                     self.send_message("У вас нет сообществ!")
 
@@ -218,3 +192,227 @@ class VkBotChat:
         image = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
         self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
                                                   'random_id': get_random_id(), "attachment": image})
+
+    def _create_cancel_menu(self, message="", add_to_existing=False, buttons=0, list_of_named_buttons=None):
+        """Создаёт меню "Отмена"
+
+        Parameters
+        ----------
+        message : str
+            текст для добавления к стандартному сообщению
+        add_to_existing : bool
+            добавить к стандартному сообщению или вывести только текст из 'message'
+        buttons : int
+            количество номерных кнопок
+        list_of_named_buttons : list
+            список названий кнопок
+        """
+        self._flag = False
+        result_message = f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)\n{message}" \
+            if add_to_existing else message
+        keyboard = self._functions.create_menu("клавиатура--отмена", buttons, list_of_named_buttons)
+        self.send_message(message=result_message.strip(), keyboard=keyboard)
+
+    def _handle_add_delete_community(self, user_message: str):
+        """Обрабатывает запрос пользователя на добавление или удаление сообщества или сообществ.
+
+        Parameters
+        ----------
+        user_message : str
+            сообщение пользователя
+        """
+        if user_message == 'отмена':
+            VkBotStatus.set_state(self._user_id, States.NONE)
+            self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
+        else:
+            communities_links = [i.strip() for i in re_split(', | |\n', user_message)]
+
+            communities_names = []
+            for i in communities_links:
+                if search(r'(?:(?:https?|ftp|http?)://)?[\w/\-?=%.]+\.[\w/\-&?=%.]+', i):
+                    communities_names.append(str(findall(r'(?:(?:https?|ftp|http?)://)?[\w/\-?=%.]+\.[\w/\-&?=%.]+',
+                                                         i)[0]).split("/")[-1])
+            communities_numbers = []
+            if VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY and len(communities_names) == 0:
+                for i in communities_links:
+                    try:
+                        if int(i) - 1 >= 0:
+                            communities_numbers.append(int(i) - 1)
+                    except ValueError:
+                        pass
+                if len(communities_numbers) != 0:
+                    comm_from_me, list_comm_urls = self._functions.show_users_communities(self._vk_session_user,
+                                                                                          show_url=True)
+                    if comm_from_me:
+                        for i in communities_numbers:
+                            if i < len(list_comm_urls):
+                                communities_names.append(list_comm_urls[i].split("/")[-1])
+
+            if len(communities_names) == 0 and len(communities_numbers) == 0:
+                self._create_cancel_menu(message="Ссылки на сообщество" +
+                                                 (' или его номера' if VkBotStatus.get_state(
+                                                     self._user_id) == States.DELETE_COMMUNITY else '') +
+                                                 " не найдено!")
+            else:
+                try:
+                    result = self._functions.change_users_community(self._vk_session_user,
+                                                                    VkBotStatus.get_state(
+                                                                        self._user_id) == States.DELETE_COMMUNITY,
+                                                                    communities_names)
+                    VkBotStatus.set_state(self._user_id, States.NONE)
+                    if len(communities_names) == 1:
+                        self.send_message(message=f"Сообщество {'удалено' if result else 'сохранено'}!")
+                    else:
+                        self.send_message(message=f"Сообщества {'удалены' if result else 'сохранены'}!")
+                except ApiError:
+                    if len(communities_names) == 1:
+                        bot_message = "Неправильно указана ссылка на сообщество!"
+                    else:
+                        bot_message = "Неправильно указаны ссылки на сообщества!"
+                    self._create_cancel_menu(message=bot_message)
+
+    def _handle_add_delete_change_note(self, user_message: str):
+        """Обрабатывает запрос пользователя на добавление, удаление или изменение задачи или задач.
+
+        Parameters
+        ----------
+        user_message : str
+            сообщение пользователя
+        """
+        if user_message.lower() == 'отмена':
+            VkBotStatus.set_state(self._user_id, States.NONE)
+            self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
+        else:
+            if VkBotStatus.get_state(self._user_id) == States.ADD_TASK_INIT:
+                try:
+                    if '-' not in user_message:
+                        raise ValueError
+                    dates = [date_parse(i.strip()) for i in user_message.split("-")]
+                    if any([i is None for i in dates]):
+                        raise ValueError
+                    dates[1] = datetime.combine(dates[0], dates[1].time())
+
+                    existing_tasks = [i for i in Users_tasks.select().where((Users_tasks.user_id == self._user_id) &
+                                                                            (((Users_tasks.start_date <= dates[0]) &
+                                                                              (Users_tasks.end_date >= dates[0])) |
+                                                                             ((Users_tasks.start_date <= dates[1]) &
+                                                                              (Users_tasks.end_date >= dates[1])) |
+                                                                             ((Users_tasks.start_date >= dates[0]) &
+                                                                              (Users_tasks.end_date >= dates[0]) &
+                                                                              (Users_tasks.start_date <= dates[1]) &
+                                                                              (Users_tasks.end_date <= dates[1]))))
+                                                                     .execute()]
+
+                    if len(existing_tasks) == 0:
+                        VkBotStatus.set_state(self._user_id, States.ADD_TASK_HAS_DATE, dates)
+                        self._create_cancel_menu(message="Введите задачу...")
+                    else:
+                        bot_message = "\n".join([f"{i + 1}) {existing_tasks[i].start_date.time().strftime('%H:%M')} "
+                                                 f"- {existing_tasks[i].end_date.time().strftime('%H:%M')}: "
+                                                 f"{existing_tasks[i].task}"
+                                                 for i in range(len(existing_tasks))])
+                        self._create_cancel_menu(
+                            message=f"На указанной дате уже есть задач{'а' if len(existing_tasks) == 1 else 'и'}. "
+                                    f"{'Какую дату' if len(existing_tasks) == 1 else 'Какие даты'} задачи "
+                                    "хотите удалить? Вводить дату начала задачи или задач. "
+                                    f"Для отмены введите 'Отмена'\n{bot_message}",
+                            buttons=len(existing_tasks),
+                            list_of_named_buttons=[i.start_date.time().strftime('%H:%M') for i in existing_tasks])
+                        VkBotStatus.set_state(self._user_id, States.DELETE_TASK_HAS_DATE, dates[0])
+                        # Добавить доп меню спрашивать удалять такую задачу или нет
+                except ValueError:
+                    self._create_cancel_menu(
+                        message="Дата указана неверно, бот не смог её распарсить. Попробуйте ещё раз.")
+            elif VkBotStatus.get_state(self._user_id) == States.ADD_TASK_HAS_DATE or \
+                    VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_ENTER_DATA:
+                dates = VkBotStatus.get_data(self._user_id)
+                if len(user_message.strip()) != 0:
+                    if VkBotStatus.get_state(self._user_id) == States.ADD_TASK_HAS_DATE:
+                        Users_tasks.create(user_id=self._user_id,
+                                           start_date=dates[0],
+                                           end_date=dates[1],
+                                           task=user_message.strip())
+                        self.send_message(message="Задача сохранена!")
+                    else:
+                        date_to_update = Users_tasks.get((Users_tasks.user_id == self._user_id) &
+                                                         (Users_tasks.start_date == dates))
+                        date_to_update.task = user_message.strip()
+                        date_to_update.save()
+                        self.send_message(message="Задача обновлена!")
+                    VkBotStatus.set_state(self._user_id, States.NONE)
+                else:
+                    self._create_cancel_menu(
+                        message="Задачу не удалось сохранить, так как пользователь ничего не ввёл." +
+                                " Введите заметку ещё раз.")
+            elif VkBotStatus.get_state(self._user_id) == States.DELETE_TASK_INIT or \
+                    VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_INIT:
+                try:
+                    date = date_parse(user_message.strip())
+                    if date is None:
+                        raise ValueError
+                    if VkBotStatus.get_state(self._user_id) == States.DELETE_TASK_INIT:
+                        VkBotStatus.set_state(self._user_id, States.DELETE_TASK_HAS_DATE, date)
+                    else:
+                        VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_HAS_DATE, date)
+
+                    min_date = datetime.combine(date.date(), datetime.min.time())
+                    max_date = datetime.combine(date.date(), datetime.max.time())
+
+                    dates = [i for i in Users_tasks.select().where((Users_tasks.user_id == self._user_id) &
+                                                                   (Users_tasks.start_date >= min_date) &
+                                                                   (Users_tasks.start_date <= max_date)).execute()]
+                    if len(dates) == 0:
+                        self.send_message(message="Задач на эту дату не существует.")
+                    else:
+                        list_of_tasks = "\n".join([f"{i + 1}) {dates[i].start_date.time().strftime('%H:%M')} "
+                                                   f"- {dates[i].end_date.time().strftime('%H:%M')}: {dates[i].task}"
+                                                   for i in range(len(dates))])
+                        self._create_cancel_menu(message=f"Введите дату начала задачи или задач...\n{list_of_tasks}",
+                                                 buttons=len(dates),
+                                                 list_of_named_buttons=[i.start_date.time().strftime('%H:%M')
+                                                                        for i in dates])
+                except ValueError:
+                    self._create_cancel_menu(
+                        message="Дата указана неверно, бот не смог её распарсить. Попробуйте ещё раз.")
+            elif VkBotStatus.get_state(self._user_id) == States.DELETE_TASK_HAS_DATE or \
+                    VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_HAS_DATE:
+                date = VkBotStatus.get_data(self._user_id).date()
+                if len(user_message.strip()) != 0:
+                    user_dates = [i.strip() for i in re_split(', | |\n', user_message)]
+                    parsed_user_dates = []
+                    for i in user_dates:
+                        if search(r'[0-9]{1,2}:[0-9]{1,2}', i):
+                            parsed_date = date_parse(str(findall(r'[0-9]{1,2}:[0-9]{1,2}', i)[0]))
+                            if parsed_date is not None:
+                                parsed_user_dates.append(parsed_date.time())
+                            if VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_HAS_DATE and \
+                                    len(parsed_user_dates) > 0:
+                                break
+                    if len(parsed_user_dates) > 0:
+                        parsed_user_dates = [datetime.combine(date, i) for i in parsed_user_dates]
+                        if VkBotStatus.get_state(self._user_id) == States.DELETE_TASK_HAS_DATE:
+                            Users_tasks.delete().where((Users_tasks.user_id == self._user_id) &
+                                                       (Users_tasks.start_date << parsed_user_dates)).execute()
+                        else:
+                            self._create_cancel_menu(message="Введите задачу...")
+                            VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_ENTER_DATA, parsed_user_dates[0])
+                            return
+                    else:
+                        self._create_cancel_menu(
+                            message="Задачу или задачи не удалось " +
+                                    ('удалить' if VkBotStatus.get_state(self._user_id) ==
+                                                  States.DELETE_TASK_HAS_DATE else 'изменить') +
+                                    ", так как пользователь ввёл неправильную дату."
+                                    + "Пример: 12:12 Введите дату или даты ещё раз.")
+                else:
+                    self._create_cancel_menu(
+                        message="Задачу или задачи не удалось " +
+                                ('удалить' if VkBotStatus.get_state(self._user_id) ==
+                                              States.DELETE_TASK_HAS_DATE else 'изменить') +
+                                ", так как пользователь ничего не ввёл." +
+                                " Введите дату или даты ещё раз.")
+                VkBotStatus.set_state(self._user_id, States.NONE)
+            # elif VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_ENTER_DATA:
+            #
+            #     VkBotStatus.set_state(self._user_id, States.NONE)
+            #     pass

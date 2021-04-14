@@ -84,11 +84,9 @@ class VkBotChat:
                                               ' Попробуйте позже.')
                 else:
                     try:
-                        group = Users_groups.get(Users_groups.user_id == self._user_id).group  # Для единичной выцепки
-                        # group = [i for i in Users_groups.select().where(Users_groups.user_id == self._user_id).limit(1)][0].group
-                        # Для множественной
+                        group = Users_groups.get(Users_groups.user_id == self._user_id).group
                         self.send_message(self._functions.schedule_menu(user_message, group))
-                    except DoesNotExist:  # and IndexError
+                    except DoesNotExist:
                         self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19.')
 
             elif user_message == 'задачи':
@@ -133,27 +131,45 @@ class VkBotChat:
                         self.send_message("Я бы мог рассказать что-то, но мне лень. ( ͡° ͜ʖ ͡°)")
 
             elif user_message == 'добавить сообщество':
-                VkBotStatus.set_state(self._user_id, States.ADD_COMMUNITY)
-                self._create_cancel_menu(add_to_existing=True)
+                if self._vk_session_user is None:
+                    self.send_pic(
+                        "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
+                        "Ошибка vk:  Не введён логин и пароль пользователя")
+                else:
+                    VkBotStatus.set_state(self._user_id, States.ADD_COMMUNITY)
+                    self._create_cancel_menu(add_to_existing=True)
 
             elif user_message == 'удалить сообщество':
-                comm_from_me, list_comm_urls = self._functions.show_users_communities(self._vk_session_user,
-                                                                                      show_name=True, show_url=True)
-                if comm_from_me:
-                    bot_message = "\nТекущие сообщества:\n" + \
-                                  "\n".join([f"{str(i + 1)}) {list_comm_urls[i]}" for i in range(len(list_comm_urls))])
-                    VkBotStatus.set_state(self._user_id, States.DELETE_COMMUNITY)
-                    self._create_cancel_menu(message=bot_message, buttons=len(list_comm_urls), add_to_existing=True)
+                if self._vk_session_user is None:
+                    self.send_pic(
+                        "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
+                        "Ошибка vk:  Не введён логин и пароль пользователя")
                 else:
-                    self.send_message("У вас нет сообществ!")
+                    comm_from_me, list_comm_urls = self._functions.show_users_communities(self._vk_session_user,
+                                                                                          show_name=True, show_url=True)
+                    if comm_from_me:
+                        bot_message = "\nТекущие сообщества:\n" + \
+                                      "\n".join(
+                                          [f"{str(i + 1)}) {list_comm_urls[i]}" for i in range(len(list_comm_urls))])
+                        VkBotStatus.set_state(self._user_id, States.DELETE_COMMUNITY)
+                        self._create_cancel_menu(message=bot_message, buttons=len(list_comm_urls), add_to_existing=True)
+                    else:
+                        self.send_message("У вас нет сообществ!")
 
             elif user_message == 'мои сообщества':
-                comm_from_me, list_comm = self._functions.show_users_communities(self._vk_session_user, show_name=True)
-                bot_message = ""
-                if not comm_from_me:
-                    bot_message += "У вас не добавлено ни одного сообщества. Используются дефолтные сообщества бота:"
-                self.send_message((bot_message + "\n" if bot_message else "") +
-                                  "\n".join([f"{str(i + 1)}) {list_comm[i]}" for i in range(len(list_comm))]))
+                if self._vk_session_user is None:
+                    self.send_pic(
+                        "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
+                        "Ошибка vk:  Не введён логин и пароль пользователя")
+                else:
+                    comm_from_me, list_comm = self._functions.show_users_communities(self._vk_session_user,
+                                                                                     show_name=True)
+                    bot_message = ""
+                    if not comm_from_me:
+                        bot_message += "У вас не добавлено ни одного сообщества. " \
+                                       "Используются дефолтные сообщества бота:"
+                    self.send_message((bot_message + "\n" if bot_message else "") +
+                                      "\n".join([f"{str(i + 1)}) {list_comm[i]}" for i in range(len(list_comm))]))
 
             else:
                 self.send_message(message='Я не знаю такой команды.')
@@ -302,7 +318,7 @@ class VkBotChat:
                                                                               (Users_tasks.end_date > dates[0]) &
                                                                               (Users_tasks.start_date < dates[1]) &
                                                                               (Users_tasks.end_date < dates[1]))))
-                                                                     .execute()]
+                        .execute()]
 
                     if len(existing_tasks) == 0:
                         if VkBotStatus.get_state(self._user_id) == States.ADD_TASK_INIT:

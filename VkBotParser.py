@@ -84,6 +84,8 @@ class Parser:
                             Parser._parse_table_to_DB(req.content)
                             print(Fore.GREEN + f"Бот пропарсил файл {x['href'].split('/')[-1]}" + Style.RESET_ALL)
                             Parser._schedule_info[x['href'].split('/')[-1]] = md5_hash
+                            Config.set_schedule_info(Parser._schedule_info)
+                            Config.save_config()
                         else:
                             print(Fore.GREEN +
                                   f"Хеш файла {x['href'].split('/')[-1]} идентичен. Пропускаем..." + Style.RESET_ALL)
@@ -97,9 +99,6 @@ class Parser:
                                if (number_of_tries - _try - 1) != 0 else '') + Style.RESET_ALL)
         if not any(files_parsed):
             print(Fore.LIGHTRED_EX + "Ни одного файла не удалось скачать! Сраные серваки МИРЭА..." + Style.RESET_ALL)
-        else:
-            Config.set_schedule_info(Parser._schedule_info)
-            Config.save_config()
         Parser._lesson_start_end_table_filled = False
         Parser._bot_parsing = False
         return all(files_parsed)
@@ -240,7 +239,8 @@ class Parser:
             время конца пары
         """
         lesson_times = None
-        if [i for i in Lesson_start_end.select().where(Lesson_start_end.lesson_number == lesson_number).execute()] != 0:
+        if len([i for i in Lesson_start_end.select()
+                .where(Lesson_start_end.lesson_number == lesson_number).execute()]) != 0:
             lesson_times = Lesson_start_end.get(Lesson_start_end.lesson_number == lesson_number)
         if lesson_times is None:
             Lesson_start_end.create(lesson_number=lesson_number, start_time=start_time, end_time=end_time)

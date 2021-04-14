@@ -30,11 +30,12 @@
 **Примечание:** Также доступен голосовой ввод этих команд на русском языке.
 
 ## Зависимости
-* [Python 3.7-3.8](https://www.python.org/downloads/)
+* [Python 3.8.5](https://www.python.org/downloads/)
+* [mySQL](https://www.mysql.com/)
 * [ffmpeg](https://ffmpeg.org/download.html)
   * Установка под Windows [(на английском)](https://www.wikihow.com/Install-FFmpeg-on-Windows)
     [(на русском)](https://ru.wikihow.com/установить-программу-FFmpeg-в-Windows)
-  * Установка под Ubuntu - выполнить команду `sudo apt install ffmpeg`
+  * Установка под Ubuntu - выполнить команду `sudo apt-get install ffmpeg`, если не может поставить, то выполнить сначала команду `sudo apt-get update`
 ____________
 > Библиотеки для Python: 
 * [vk_api](https://github.com/python273/vk_api) - библиотека для работы бота с ВК.
@@ -77,6 +78,93 @@ pip install -r requirements.txt
 <!---->
 Или исполнить основной файл `VkBotDiary.py` через команду `python VkBotDiary.py` или если в Linux - `python3 VkBotDiary.py`,
 предварительно установив все зависимости.
+
+## Docker
+
+### Готовый образ
+[Страница контейнера бота](https://hub.docker.com/r/druzai/vkbotdiary)
+<!---->
+Для развёртывания готового образа с ботом и базой данных, находясь в корневой папке проекта, надо:
+* В файле [docker-compose.yml](docker-compose.yml) указать свои значения переменных окружения:
+  * `WAIT_HOSTS`: указывается контейнер с названием базы данных mySQL и портом для прослушивания через двоеточие, **менять если вы поменяли имя контейнера базы данных**
+  * `WAIT_HOSTS_TIMEOUT`: время ожидания проверки подключения к базе данных mySQL в секундах до неудачи, **можно не менять**
+  * `WAIT_SLEEP_INTERVAL`: время бездействия проверки подключения к базе данных mySQL в секундах до следующей попытки, **можно не менять**
+  * `WAIT_HOST_CONNECT_TIMEOUT`: время пингования подключения к базе данных mySQL в секундах, **можно не менять**
+  * `BOT_TOKEN`: токен вк бота сообщества, **обязательно вставить!**
+  * `BOT_USER_LOGIN`: логин пользователя, через которого работают команды связанные с мемами, ***по желанию*, можно не указывать (удалить из списка)**
+  * `BOT_USER_PASSWORD`: пароль пользователя, через которого работают команды связанные с мемами, ***по желанию*, можно не указывать (удалить из списка)**
+  * `MYSQL_HOST`: имя контейнера базы данных mySQL, **менять если вы поменяли имя контейнера базы данных**
+  * `MYSQL_USER`: имя пользователя базы данных mySQL, **менять если вы хотите использовать другого пользователя вместо `root` для базы данных**
+  * `MYSQL_PASSWORD`: пароль пользователя базы данных mySQL, **менять если вы хотите используете другой пароль пользователя или другого пользователя для базы данных**
+  * `MYSQL_DATABASE`: имя базы данных в mySQL, где будут храниться таблицы для бота, **можно указать какое хотите название**
+  * `BOT_AWAIT_TIME`: время в секундах на ожидание перед очередным обновлением файлов расписания, **можно указать какое хотите значение**
+* Для сборки контейнера — команду `docker-compose -p "my-app" build` (`"my-app"` - имя контейнера)
+* Для запуска контейнера — команду `docker run my-app`
+<!---->
+**Примечание:** Если в строке, которую выводите в значения переменных окружения, есть знак доллара, то его надо экранировать долларом. Пример: было так - `"fung$gbiobm"`, а надо так - `"fung$$gbiobm"`.
+
+### Сборка образа своими руками
+Но если вы хотите сделать собственный образ и запустить его с базой данных, а не скачивать готовый, то в корневой папке проекта должно быть 2 файла: Dockerfile и изменённый docker-compose.yml
+<!---->
+**Dockerfile**
+```dockerfile
+FROM python:3.8.5
+
+# copy bot files and its requirements
+WORKDIR /VkBotDiary/
+ADD *.py /VkBotDiary/
+ADD requirements.txt /VkBotDiary/
+
+# install requirements
+RUN pip install -r requirements.txt
+
+# install ffmpeg
+RUN apt-get update
+RUN apt-get -y install ffmpeg
+
+# Add docker-compose-wait tool
+ENV WAIT_VERSION 2.7.3
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/$WAIT_VERSION/wait ./wait-script
+RUN chmod 775 ./wait-script
+```
+**docker-compose.yml**
+```dockerfile
+version: '3.6'
+
+services:
+  db:
+    image: mysql:8.0.23
+    container_name: db
+    restart: always
+    environment:
+        MYSQL_ROOT_PASSWORD: root_password
+        MYSQL_ROOT_HOST: "%"
+        MYSQL_USER: test_user
+        MYSQL_PASSWORD: test_password
+    ports:
+      - "3306:3306"
+  vkbotdiary:
+    build: ./
+    command: sh -c "./wait-script && python ./VkBotDiary.py"
+    depends_on:
+      - db
+    links:
+      - db
+    environment:
+        WAIT_HOSTS: "db:3306"
+        WAIT_HOSTS_TIMEOUT: 300
+        WAIT_SLEEP_INTERVAL: 5
+        WAIT_HOST_CONNECT_TIMEOUT: 10
+        BOT_TOKEN: "your-vk-bot-token-here"
+        BOT_USER_LOGIN: "vk-user-login"
+        BOT_USER_PASSWORD: "vk-user-password"
+        MYSQL_HOST: "db"
+        MYSQL_USER: "root"
+        MYSQL_PASSWORD: "root_password"
+        MYSQL_DATABASE: "Your-Database"
+        BOT_AWAIT_TIME: 3600
+```
+Настройка значений переменных окружения, сборка и запуск контейнера аналогична описанию выше.
 
 ## Протестированные платформы
 * Windows 7 или выше (32/64 бит)

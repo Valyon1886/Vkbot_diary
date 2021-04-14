@@ -5,13 +5,13 @@ class InitDatabase:
     """Класс для добавления начальных значений в базу данных"""
 
     @staticmethod
-    def ensure_start_data_added():
+    def ensure_start_data_added() -> None:
         """Добавление начальных значений в базу данных"""
         InitDatabase._ensure_users_added()
         InitDatabase._ensure_communities_added()
 
     @staticmethod
-    def _ensure_users_added():
+    def _ensure_users_added() -> None:
         """Добавление начальных значений в таблицу 'Users_groups'"""
         users_data = [
             {'user_id': 283202201, 'group': "ИКБО-03-19"},
@@ -23,7 +23,7 @@ class InitDatabase:
             print("Начальные значения добавлены в таблицу 'Users'!")
 
     @staticmethod
-    def _ensure_communities_added():
+    def _ensure_communities_added() -> None:
         """Добавление начальных значений в таблицу 'Users_communities'"""
         users_communities = [
             {'user_id': 92798890, 'community_id': 66678575},

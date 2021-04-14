@@ -16,23 +16,19 @@ from SpeechRecognizer import SpeechRecognizer
 
 
 # TODO:
-#  1. Расписание (реализовано)
-#  2. Пользователи/настройки (реализовано)
-#  3. Задачи (реализованы, но в расписании не выводятся)
-#  Добавление своих пунктов в расписание (см таблицу)
-#  При парсинге расписания и заметок на день сортировать их в порядке возрастания времени начала как
-#                                                               в Things to practice/README.md и выводить в виде таблицы
+#  1. Расписание (реализовано) ✓
+#  2. Пользователи/настройки (реализовано) ✓
+#  3. Задачи (реализованы) ✓
 #  Мб ещё прикрутить работу со всеми институтами, это не сложно
 #  Добавить в ответы бота смайлики, Серёге надо)
-#  tab = "&#8194;" * 4
 
-def ensure_tables_created():
+def ensure_tables_created() -> None:
     """Проверка, что таблицы созданы"""
     InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Users_groups,
                                     Users_tasks, Lesson_start_end, Users_communities])
 
 
-def checking_schedule_on_changes():
+def checking_schedule_on_changes() -> None:
     """Проверка расписания на изменения с заданным периодом ожидания"""
     while True:
         print(Fore.MAGENTA + "Начинаем парсинг файлов расписания..." + Style.RESET_ALL)
@@ -41,7 +37,7 @@ def checking_schedule_on_changes():
         sleep(Config.get_await_time() if all_files_downloaded else 60)
 
 
-def main():
+def main() -> None:
     """Функция запуска бота и прослушивание им сообщений от пользователя"""
     Config.read_config()
     print(Fore.BLUE + "Файл настроек загружен!" + Style.RESET_ALL)

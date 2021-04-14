@@ -23,11 +23,11 @@ class VkBotChat:
 
     Parameters
     ----------
-    vk_session : VkApi
+    vk_session: VkApi
         авторизованное сообщество
-    user_id : int
+    user_id: int
         id пользователя
-    vk_session_user : VkApi
+    vk_session_user: VkApi
         пользователь для отправки мемов
     """
 
@@ -38,12 +38,12 @@ class VkBotChat:
         self._vk_session_user = vk_session_user
         self._flag = True
 
-    def get_response(self, user_message):
+    def get_response(self, user_message) -> None:
         """Анализирует запрос пользователя и отвечает на него.
 
         Parameters
         ----------
-        user_message : str
+        user_message: str
             сообщение пользователя
         """
         if VkBotStatus.get_state(self._user_id) == States.ADD_COMMUNITY or \
@@ -162,27 +162,27 @@ class VkBotChat:
             keyboard = self._functions.create_menu("Продолжить")
             self.send_message(message='Что хочешь посмотреть?', keyboard=keyboard)
 
-    def send_message(self, message=None, keyboard=None):
+    def send_message(self, message=None, keyboard=None) -> None:
         """Анализирует запрос пользователя и отвечает на него.
 
         Parameters
         ----------
-        message : str
+        message: str
             сообщение для пользователя (по умолчанию None)
-        keyboard : VkKeyboard
+        keyboard: VkKeyboard
             клавиатура доступная пользователю (по умолчанию None)
         """
         self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
                                                   'random_id': get_random_id(), 'keyboard': keyboard})
 
-    def send_pic(self, image_url, message=None):
+    def send_pic(self, image_url, message=None) -> None:
         """Анализирует запрос пользователя и отвечает на него.
 
         Parameters
         ----------
-        image_url : str
+        image_url: str
             ссылка на изображение
-        message : str
+        message: str
             сообщение для пользователя (по умолчанию None)
         """
         arr = BytesIO(req_get(image_url).content)
@@ -193,19 +193,19 @@ class VkBotChat:
         self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
                                                   'random_id': get_random_id(), "attachment": image})
 
-    def _create_cancel_menu(self, message="", add_to_existing=False, buttons=0, list_of_named_buttons=None):
+    def _create_cancel_menu(self, message="", add_to_existing=False, buttons=0, list_of_named_buttons=None) -> None:
         """Создаёт меню "Отмена"
 
         Parameters
         ----------
-        message : str
+        message: str
             текст для добавления к стандартному сообщению
-        add_to_existing : bool
+        add_to_existing: bool
             добавить к стандартному сообщению или вывести только текст из 'message'
-        buttons : int
+        buttons: int
             количество номерных кнопок
-        list_of_named_buttons : list
-            список названий кнопок
+        list_of_named_buttons: list
+            список названий для кнопок
         """
         self._flag = False
         result_message = f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)\n{message}" \
@@ -213,12 +213,12 @@ class VkBotChat:
         keyboard = self._functions.create_menu("клавиатура--отмена", buttons, list_of_named_buttons)
         self.send_message(message=result_message.strip(), keyboard=keyboard)
 
-    def _handle_add_delete_community(self, user_message: str):
+    def _handle_add_delete_community(self, user_message: str) -> None:
         """Обрабатывает запрос пользователя на добавление или удаление сообщества или сообществ.
 
         Parameters
         ----------
-        user_message : str
+        user_message: str
             сообщение пользователя
         """
         if user_message == 'отмена':
@@ -271,12 +271,12 @@ class VkBotChat:
                         bot_message = "Неправильно указаны ссылки на сообщества!"
                     self._create_cancel_menu(message=bot_message)
 
-    def _handle_add_delete_change_task(self, user_message: str):
+    def _handle_add_delete_change_task(self, user_message: str) -> None:
         """Обрабатывает запрос пользователя на добавление, удаление или изменение задачи или задач.
 
         Parameters
         ----------
-        user_message : str
+        user_message: str
             сообщение пользователя
         """
         if user_message.lower() == 'отмена':

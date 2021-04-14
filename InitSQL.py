@@ -13,14 +13,14 @@ class InitSQL:
     _myDB = None
 
     @staticmethod
-    def get_DB():
+    def get_DB() -> MySQLDatabase:
         """Получение экземпляра соединения с подключенной базой данных"""
         if InitSQL._myDB is None and basename(getcwd()) != "docs":
             InitSQL._myDB = InitSQL._init_DB()
         return InitSQL._myDB
 
     @staticmethod
-    def _init_DB():
+    def _init_DB() -> MySQLDatabase:
         """Инициализация соединения с базой данных и сохранение экземпляра"""
         Config.read_config()
         database_config = Config.get_database_info()

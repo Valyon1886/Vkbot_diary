@@ -13,7 +13,7 @@ class Config:
     _config_dict = {}
 
     @staticmethod
-    def read_config():
+    def read_config() -> None:
         """Создаёт файл конфигурации (если нету) и загружает его в память."""
         c_init()
         file_exists = False
@@ -28,7 +28,7 @@ class Config:
         Config._set_up_config(file_exists, first)
 
     @staticmethod
-    def save_config():
+    def save_config() -> None:
         """Сохраняет файл конфигурации"""
         try:
             with open(file=Path(Config._dir_name + '/' + Config._config_name), mode="w", encoding="utf-8") as conf_file:
@@ -42,8 +42,8 @@ class Config:
         return Config._dir_name
 
     @staticmethod
-    def _set_up_config(file_exists=False, first=False):
-        """Создаёт и заполняет конфигурационный файл бота."""
+    def _set_up_config(file_exists=False, first=False) -> None:
+        """Проверяет и заполняет (если нет каких-то ключей) конфигурационный файл бота."""
         changes_made = False
         if first:
             if not file_exists:
@@ -82,7 +82,7 @@ class Config:
             print(Fore.GREEN + "Файл настроек сохранён!" + Style.RESET_ALL)
 
     @staticmethod
-    def _set_token():
+    def _set_token() -> None:
         """Устанавливает токен для бота"""
         Config._config_dict["token"] = input("Введите токен vk бота: ")
 
@@ -92,7 +92,7 @@ class Config:
         return Config._config_dict["token"]
 
     @staticmethod
-    def _set_user_info():
+    def _set_user_info() -> None:
         """Устанавливает логин и пароль пользователя для бота."""
         if 'y' == input("Вы хотите использовать команду 'случайный мем'? (нужен логин и пароль пользователя) Y/n\n") \
                 .lower():
@@ -111,7 +111,7 @@ class Config:
             return None
 
     @staticmethod
-    def _set_database_info():
+    def _set_database_info() -> None:
         """Устанавливает информацию о подключении к базе данных"""
         myDB = {}
         if 'y' == input("Ваша mysql находится на localhost (вариант для docker-образа)? Y/n\n"):
@@ -136,7 +136,7 @@ class Config:
         return Config._config_dict["mysqldb"]
 
     @staticmethod
-    def _set_init_database():
+    def _set_init_database() -> None:
         """Устанавливает надо ли добавлять тестовые значения в базу данных в пустые таблицы"""
         Config._config_dict["init_database"] = 'y' == input("Добавлять тестовые значения в базу данных в пустые " +
                                                             "таблицы? Y/n\n").lower()
@@ -147,7 +147,7 @@ class Config:
         return Config._config_dict["init_database"]
 
     @staticmethod
-    def set_schedule_info(schedule_info_dict: dict):
+    def set_schedule_info(schedule_info_dict: dict) -> None:
         """Сохраняет словарь: ключ - имя скачанного файла расписания, значение - хеш-значение (md5) этого файла"""
         Config._config_dict["schedule_info"] = schedule_info_dict
 
@@ -157,7 +157,7 @@ class Config:
         return Config._config_dict["schedule_info"]
 
     @staticmethod
-    def _set_await_time():
+    def _set_await_time() -> None:
         """Сохраняет время ожидания перед проверкой расписания в секундах"""
         Config._config_dict["await_time"] = int(input("Введите сколько секунд бот будет ожидать" +
                                                       " перед проверкой расписания с сайта МИРЭА: "))

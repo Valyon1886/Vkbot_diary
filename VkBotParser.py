@@ -21,13 +21,25 @@ class Parser:
     _bot_parsing = False
 
     @staticmethod
-    def get_bot_parsing_state():
-        """Возвращает значение парсит ли бот расписание или нет"""
+    def get_bot_parsing_state() -> bool:
+        """Возвращает значение парсит ли бот расписание или нет
+
+        Return
+        ----------
+        bot_parsing: bool
+            парсит ли бот расписание
+        """
         return Parser._bot_parsing
 
     @staticmethod
-    def download_schedules():
-        """Скачивает актуальное расписание с сайта МИРЭА."""
+    def download_schedules() -> bool:
+        """Скачивает актуальное расписание с сайта МИРЭА
+
+        Return
+        ----------
+        all_files_parsed: bool
+            пропарсены все ли файлы
+        """
         Parser._bot_parsing = True
         files_parsed = []
         parse_all_files_anyway = False
@@ -93,8 +105,14 @@ class Parser:
         return all(files_parsed)
 
     @staticmethod
-    def _parse_table_to_DB(table_contents):
-        """Обработка скачанного расписания в базу данных."""
+    def _parse_table_to_DB(table_contents) -> None:
+        """Обработка скачанного расписания в базу данных
+
+        Parameters
+        ----------
+        table_contents: bytes
+            содержимое в виде набора байт скачанной таблицы
+        """
         book = open_workbook(file_contents=table_contents)
         sheet = book.sheet_by_index(0)
         num_cols = sheet.ncols
@@ -210,8 +228,17 @@ class Parser:
                                 group_count += 1
 
     @staticmethod
-    def _fill_lesson_start_end_table(lesson_number: int, start_time: time, end_time: time):
-        """Заполнение таблицы 'Lesson_start_end' в базе данных"""
+    def _fill_lesson_start_end_table(lesson_number: int, start_time: time, end_time: time) -> None:
+        """Заполнение таблицы 'Lesson_start_end' в базе данных
+        Parameters
+        ----------
+        lesson_number: int
+            номер пары
+        start_time: time
+            время начала пары
+        end_time: time
+            время конца пары
+        """
         lesson_times = None
         if [i for i in Lesson_start_end.select().where(Lesson_start_end.lesson_number == lesson_number).execute()] != 0:
             lesson_times = Lesson_start_end.get(Lesson_start_end.lesson_number == lesson_number)
@@ -225,42 +252,3 @@ class Parser:
             lesson_times.save()
         if lesson_number == 6:
             Parser._lesson_start_end_table_filled = True
-
-
-if __name__ == '__main__':
-    import time
-
-    group = "ИКБО-03-19"
-    # Weeks.create(group=group,
-    #              even=False,
-    #              day_lesson=Days.create(day_of_week='Monday',
-    #                                             schedule_of_subject=Subjects.create(lesson_number='',
-    #                                                                                            subject_task='',
-    #                                                                                            lesson_type='',
-    #                                                                                            teacher='',
-    #                                                                                            class_number='',
-    #                                                                                            link="")))
-
-    # Parser().parse_table_DB(Path("local_files" + f"/schedule-{2}k.xlsx"))
-    tic = time.perf_counter()
-    # res = [i.day_lesson_id for i in Weeks.select().where(Weeks.group == group and Weeks.even == True)]
-    result = Weeks.select(fn.MAX(Weeks.days_of_group_id)).scalar()
-
-    try:
-        day_lesson = Weeks.get((Weeks.group == group) & (Weeks.even == True)).days_of_group_id  # Для единичной выцепки
-        # group = [i for i in Users_groups.select().where(Users_groups.user_id == Parser._user_id).limit(1)][0].group  # Для множественной
-        # schedules_of_day = Days.get((Days.day_of_week_id == day_lesson) & (Days.day_of_week == "Понедельник")).subject_schedules_of_day_id
-        schedules_of_day = [i.subject_schedules_of_day_id for i in Days.select(Days.subject_schedules_of_day_id).where(
-            Days.day_of_week_id == day_lesson).execute()]
-        # res = [i.subject_schedules_of_day_id for i in
-        #        Days.select().where((Days.day_of_week_id == day_lesson) & (Days.day_of_week == "Понедельник")).execute()]
-        for sc in schedules_of_day:
-            for subject in [i for i in Subjects.select().where(Subjects.schedule_of_subject_id == sc).execute()]:
-                message = f"{subject.lesson_number})\n{subject.subject}\n{subject.lesson_type}\n{subject.teacher}\n{subject.class_number}\n{subject.link}"
-                print(message)
-    except DoesNotExist:  # and IndexError
-        print("lol DNE")
-    toc = time.perf_counter()
-    print(f"Selected in {toc - tic:0.5f} seconds")
-    # Days.day_of_week == "Понедельник"
-    # Subjects

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from random import randint, choice
+from typing import Tuple
 
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from peewee import DoesNotExist
@@ -42,7 +43,7 @@ class VkBotFunctions:
         self._user_id = user_id
 
     @staticmethod
-    def create_menu(user_message: str, buttons=0, list_of_named_buttons=None):
+    def create_menu(user_message: str, buttons=0, list_of_named_buttons=None) -> VkKeyboard:
         """Создание клавиатуры на основе запроса пользователя.
 
         Parameters
@@ -51,12 +52,12 @@ class VkBotFunctions:
             сообщение пользователя
         buttons: int
             количество кнопок для добавления
+        list_of_named_buttons: list
+            список названий для кнопок
         Return
         ----------
         keyboard: VkKeyboard
             клавиатура с командами
-        list_of_named_buttons : list
-            список названий кнопок
         """
         keyboard = VkKeyboard(one_time=True)
 
@@ -118,7 +119,7 @@ class VkBotFunctions:
         keyboard = keyboard.get_keyboard()
         return keyboard
 
-    def schedule_menu(self, user_message: str, group: str):
+    def schedule_menu(self, user_message: str, group: str) -> str:
         """Обрабатывает запрос пользователя и выдает ответ.
 
         Parameters
@@ -178,7 +179,8 @@ class VkBotFunctions:
         else:
             return "Я не знаю такой команды."
 
-    def _make_schedule(self, group: str, week_day: str, day_date: datetime, lessons_start_end: dict, next_week=False):
+    def _make_schedule(self, group: str, week_day: str,
+                       day_date: datetime, lessons_start_end: dict, next_week=False) -> str:
         """Преобразует часть расписание в сообщение для пользователя.
 
         Parameters
@@ -267,7 +269,7 @@ class VkBotFunctions:
         return full_sentence
 
     @staticmethod
-    def _get_number_week(day_today: datetime):
+    def _get_number_week(day_today: datetime) -> int:
         """Получение номера недели.
 
         Parameters
@@ -284,7 +286,7 @@ class VkBotFunctions:
         number = current_week - first_week + 1
         return number
 
-    def send_meme(self, vk_session_user):
+    def send_meme(self, vk_session_user) -> Tuple[str, str]:
         """Отправляет пользователю случайный мем.
 
         Parameters
@@ -324,7 +326,7 @@ class VkBotFunctions:
 
         return photo_url, choice(self._300_answers)
 
-    def change_users_community(self, vk_session_user, need_delete: bool, communities_names: list):
+    def change_users_community(self, vk_session_user, need_delete: bool, communities_names: list) -> bool:
         """Добавляет или удаляет сообщества из таблицы
 
         Parameters
@@ -355,7 +357,7 @@ class VkBotFunctions:
                     Users_communities.create(user_id=self._user_id, community_id=community_id)
         return need_delete
 
-    def show_users_communities(self, vk_session_user, show_name=False, show_url=False):
+    def show_users_communities(self, vk_session_user, show_name=False, show_url=False) -> Tuple[bool, list]:
         """Возвращает список сообществ из таблицы и стандартные ли это сообщества или собственные пользователя
 
         Parameters

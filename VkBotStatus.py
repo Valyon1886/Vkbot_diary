@@ -22,15 +22,35 @@ class VkBotStatus:
     _states_dict = {}
 
     @staticmethod
-    def get_state(user_id):
-        """Получение состояния бота для данного пользователя"""
+    def get_state(user_id) -> States:
+        """Получение состояния бота для данного пользователя
+
+        Parameters
+        ----------
+        user_id: int
+            id пользователя
+        Return
+        ----------
+        state: States
+            состояние бота для данного пользователя
+        """
         return VkBotStatus._states_dict.get(user_id, States.NONE) \
             if isinstance(VkBotStatus._states_dict.get(user_id, States.NONE), States) \
             else VkBotStatus._states_dict.get(user_id, States.NONE)[0]
 
     @staticmethod
     def get_data(user_id):
-        """Получение данных у состояния бота для данного пользователя"""
+        """Получение данных у состояния бота для данного пользователя
+
+        Parameters
+        ----------
+        user_id: int
+            id пользователя
+        Return
+        ----------
+        data: list, dict, object
+            данные сохранённые для данного пользователя
+        """
         try:
             if not isinstance(VkBotStatus._states_dict.get(user_id, [])[-1], States):
                 return VkBotStatus._states_dict.get(user_id, States.NONE)[-1]
@@ -39,8 +59,18 @@ class VkBotStatus:
         return None
 
     @staticmethod
-    def set_state(user_id, state: States, task_data=None):
-        """Сохранение состояния бота для данного пользователя"""
+    def set_state(user_id, state: States, task_data=None) -> None:
+        """Сохранение состояния бота для данного пользователя
+
+        Parameters
+        ----------
+        user_id: int
+            id пользователя
+        state: States
+            состояние бота для данного пользователя
+        task_data
+            данные для данным пользователем
+        """
         if state == States.NONE:
             VkBotStatus._states_dict.pop(user_id, None)
         else:

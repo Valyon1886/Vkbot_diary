@@ -22,7 +22,8 @@ class SpeechRecognizer:
             преобразованная строка
         """
         # using pipe:0 refers to the stdin, pipe:1 refers to stdout
-        ffmpeg_process = Popen('ffmpeg -v fatal -hide_banner -i pipe:0 -f wav pipe:1', stdin=PIPE, stdout=PIPE)
+        ffmpeg_process = Popen('ffmpeg -v fatal -hide_banner -i pipe:0 -f wav pipe:1',
+                               shell=True, stdin=PIPE, stdout=PIPE)
 
         output_stream = ffmpeg_process.communicate(req_get(url).content)
 

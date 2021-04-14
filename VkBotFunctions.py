@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import randint, choice
 
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from peewee import DoesNotExist
 
-from MySQLStorage import Users_communities, Weeks, Days, Subjects, Lesson_start_end
+from MySQLStorage import Users_communities, Weeks, Days, Subjects, Lesson_start_end, Users_tasks
 
 
 class VkBotFunctions:
@@ -135,32 +135,41 @@ class VkBotFunctions:
         if user_message in ["на сегодня", "на завтра", "на эту неделю", "на следующую неделю"]:
             lessons_start_end = {i.lesson_number: [i.start_time, i.end_time]
                                  for i in Lesson_start_end.select().execute()}
+            start_date = datetime.now() - timedelta(days=datetime.now().isoweekday() - 1)
             if user_message in ["на сегодня", "на завтра"]:
                 if user_message == "на сегодня":
-                    week_day = datetime.now().isoweekday() - 1
+                    week_day_number = datetime.now().isoweekday() - 1
                 else:
-                    week_day = datetime.now().isoweekday()
-                    if week_day == 7:
-                        week_day = 0
-                if week_day < 6:
-                    week_day = self._week_days[week_day]
-                    full_sentence = self._make_schedule(group, week_day, lessons_start_end, one_day=True)
+                    week_day_number = datetime.now().isoweekday()
+                    if week_day_number == 7:
+                        week_day_number = 0
+                if week_day_number < 6:
+                    week_day = self._week_days[week_day_number]
+                    full_sentence = self._make_schedule(group, week_day, start_date + timedelta(days=week_day_number),
+                                                        lessons_start_end)
                 else:
                     week_day = "Воскресенье"
                     full_sentence = ""
                 if full_sentence != "":
-                    return f'Расписание на {user_message.split(" ")[-1]}:\n{week_day}\n{full_sentence}'
+                    return f'Расписание на {user_message.split(" ")[-1]}:\n{week_day}:\n{full_sentence}'
                 else:
                     return f'{user_message.split(" ")[-1].capitalize()} - {week_day.lower()}, выходной.'
             elif user_message in ["на эту неделю", "на следующую неделю"]:
                 full_sentence = ""
+                if user_message == "на следующую неделю":
+                    start_date = start_date + timedelta(days=7)
                 for i in range(len(self._week_days)):
+                    week_day_number = i
                     week_day = self._week_days[i]
-                    full_sentence += f'\n{week_day}:\n' + \
-                                     self._make_schedule(group,
-                                                         week_day,
-                                                         lessons_start_end,
-                                                         next_week=user_message == "на следующую неделю") + '\n\n'
+                    schedule_sentence = self._make_schedule(group,
+                                                            week_day,
+                                                            start_date + timedelta(days=week_day_number),
+                                                            lessons_start_end,
+                                                            next_week=user_message == "на следующую неделю")
+                    if schedule_sentence:
+                        full_sentence += f'\n{week_day}:\n' + schedule_sentence + '\n\n'
+                    else:
+                        full_sentence += f"\n{week_day} - выходной.\n\n"
                 return f'Расписание {user_message}: {full_sentence}'
         elif user_message == "какая неделя?":
             return f'Сейчас {str(self._get_number_week(datetime.now()))} неделя.'
@@ -169,7 +178,7 @@ class VkBotFunctions:
         else:
             return "Я не знаю такой команды."
 
-    def _make_schedule(self, group: str, week_day: str, lessons_start_end: dict, one_day=False, next_week=False):
+    def _make_schedule(self, group: str, week_day: str, day_date: datetime, lessons_start_end: dict, next_week=False):
         """Преобразует часть расписание в сообщение для пользователя.
 
         Parameters
@@ -178,10 +187,10 @@ class VkBotFunctions:
             группа пользователя
         week_day : str
             день недели
+        day_date: datetime
+            День недели в формате datetime
         lessons_start_end : dict
             словарь начала и окончания каждой пары
-        one_day : bool
-            вывод на один день или несколько (по умолчанию на несколько)
         next_week : bool
             вывод на следующую неделю (по умолчанию на эту)
         Return
@@ -189,7 +198,17 @@ class VkBotFunctions:
         full_sentence: str
             преобразованная строка
         """
+        full_sentence = ""
+        space = "&#8194;"
+        new_line = '\n'
         even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
+        min_date = datetime.combine(day_date.date(), datetime.min.time())
+        max_date = datetime.combine(day_date.date(), datetime.max.time())
+
+        dates_of_tasks = [i for i in Users_tasks.select().where((Users_tasks.user_id == self._user_id) &
+                                                                (Users_tasks.start_date >= min_date) &
+                                                                (Users_tasks.start_date <= max_date)).execute()]
+
         try:
             day_of_group_id = Weeks.get((Weeks.group == group) & (Weeks.even == even_week)).days_of_group_id
 
@@ -201,28 +220,50 @@ class VkBotFunctions:
             if len(subjects) == 0:
                 raise DoesNotExist
         except DoesNotExist:
-            return "Данные не доступны"
+            subjects = []
+            full_sentence += "Данные по расписанию не доступны\n"
 
-        full_sentence = ""
-        any_subject = any([bool(i.subject) for i in subjects])
-        for subj in subjects:
-            if not subj.subject:
-                if not one_day or any_subject:
-                    full_sentence += f"{str(subj.lesson_number)}) " \
-                                     f"c {lessons_start_end[subj.lesson_number][0].strftime('%H:%M')} " \
-                                     f"по {lessons_start_end[subj.lesson_number][1].strftime('%H:%M')}\n --\n"
-            else:
-                full_sentence += f"{str(subj.lesson_number)}) " \
-                                 f"c {lessons_start_end[subj.lesson_number][0].strftime('%H:%M')} " \
-                                 f"по {lessons_start_end[subj.lesson_number][1].strftime('%H:%M')}\n" \
-                                 f"{subj.subject} {subj.lesson_type}. "
-                if subj.teacher:
-                    full_sentence += f"Преподаватель: {subj.teacher} "
-                if subj.class_number:
-                    full_sentence += f"Аудитория: {subj.class_number}"
-                if subj.link:
-                    full_sentence += f"\nСсылка: {subj.link}"
-                full_sentence += "\n"
+        full_list = []
+        task_list = [[i.start_date.time(), i.end_date.time(), i.task] for i in dates_of_tasks]
+        for i in subjects:
+            lesson_start_time = lessons_start_end[i.lesson_number][0]
+            lesson_end_time = lessons_start_end[i.lesson_number][1]
+            is_place_empty = True
+            if i.subject:
+                for j in task_list:
+                    if (j[0] < lesson_start_time < j[1]) or (j[0] < lesson_end_time < j[1]) or \
+                            (j[0] > lesson_start_time < j[1] < lesson_end_time > j[0]):
+                        if is_place_empty:
+                            is_place_empty = False
+                if is_place_empty:
+                    full_list.append([lesson_start_time, lesson_end_time, i.subject,
+                                      i.lesson_type, i.teacher, i.class_number, i.link])
+        full_list.extend(task_list)
+        full_list.sort(key=lambda x: x[0])
+
+        for sbj_tsk in range(len(full_list)):
+            full_sentence += space * 2 + f"С {full_list[sbj_tsk][0].strftime('%H:%M')} " \
+                             f"по {full_list[sbj_tsk][1].strftime('%H:%M')}" \
+                             f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
+            if len(full_list[sbj_tsk]) > 3:
+                if full_list[sbj_tsk][3]:
+                    full_sentence += f"\n{space * 4}Вид занятия: {full_list[sbj_tsk][3].split(new_line)[0]}"
+                if full_list[sbj_tsk][4]:
+                    if len(full_list[sbj_tsk][4].split(new_line)) == 1:
+                        full_sentence += f"\n{space * 4}Препод: {full_list[sbj_tsk][4]} "
+                    else:
+                        full_sentence += f"\n{space * 4}Преподы: {full_list[sbj_tsk][4].replace(new_line, f'{new_line}{space * 13} ')}"
+                if full_list[sbj_tsk][5]:
+                    if len(full_list[sbj_tsk][5].split(new_line)) == 1:
+                        full_sentence += f"\n{space * 4}Аудитория: {full_list[sbj_tsk][5].replace(new_line, ', ')}"
+                    else:
+                        full_sentence += f"\n{space * 4}Аудитории: {full_list[sbj_tsk][5].replace(new_line, ', ')}"
+                if full_list[sbj_tsk][6]:
+                    if len(full_list[sbj_tsk][6].split(new_line)) == 1:
+                        full_sentence += f"\n{space * 4}Ссылка: {full_list[sbj_tsk][6].replace(new_line, ', ')}"
+                    else:
+                        full_sentence += f"\n{space * 4}Ссылки: {full_list[sbj_tsk][6].replace(new_line, f'{new_line}{space * 12} ')}."
+            full_sentence += "\n"
         return full_sentence
 
     @staticmethod

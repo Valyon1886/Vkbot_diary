@@ -84,10 +84,11 @@ class VkBotChat:
                                               ' Попробуйте позже.')
                 else:
                     try:
-                        group = Users_groups.get(Users_groups.user_id == self._user_id).group
+                        group = Users_groups.get(Users_groups.user_id == self._user_id).group \
+                            if user_message != 'какая неделя?' else None
                         self.send_message(self._functions.schedule_menu(user_message, group))
                     except DoesNotExist:
-                        self.send_message(message='Вы не ввели группу.\n Формат ввода: ИКБО-03-19.')
+                        self.send_message(message='Вы не ввели группу.\nФормат ввода: ИКБО-03-19.')
 
             elif user_message == 'задачи':
                 self._flag = False
@@ -391,6 +392,7 @@ class VkBotChat:
                                                                    (Users_tasks.start_date >= min_date) &
                                                                    (Users_tasks.start_date <= max_date)).execute()]
                     if len(dates) == 0:
+                        VkBotStatus.set_state(self._user_id, States.NONE)
                         self.send_message(message="Задач на эту дату не существует.")
                     else:
                         dates.sort(key=lambda x: x.start_date.time())
@@ -423,6 +425,10 @@ class VkBotChat:
                         if VkBotStatus.get_state(self._user_id) == States.DELETE_TASK_HAS_DATE:
                             Users_tasks.delete().where((Users_tasks.user_id == self._user_id) &
                                                        (Users_tasks.start_date << parsed_user_dates)).execute()
+                            if len(parsed_user_dates) == 1:
+                                self.send_message(message="Задача удалена!")
+                            else:
+                                self.send_message(message="Задачи удалены!")
                         else:
                             self._create_cancel_menu(message="Что вы хотите изменить в задаче?"
                                                              "\n1) Всю задачу время начала и конца и текст задачи"
@@ -435,8 +441,8 @@ class VkBotChat:
                             message="Задачу или задачи не удалось " +
                                     ('удалить' if VkBotStatus.get_state(self._user_id) ==
                                                   States.DELETE_TASK_HAS_DATE else 'изменить') +
-                                    ", так как пользователь ввёл неправильную дату."
-                                    + "Пример: 12:12 Введите дату или даты ещё раз.")
+                                    ", так как пользователь ввёл неправильную дату. "
+                                    + "Пример: 12:12. Введите дату или даты ещё раз.")
                 else:
                     self._create_cancel_menu(
                         message="Задачу или задачи не удалось " +

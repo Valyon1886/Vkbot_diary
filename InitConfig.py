@@ -199,10 +199,11 @@ class Config:
         """
         myDB = {}
         if Config._runned_from_docker:
-            if any([i is None for i in [mysql_user, mysql_password]]):
-                exit("Нету логина и пароля пользователя для подключения бота к базе данных в переменных окружения!")
+            if any([i is None for i in [mysql_user, mysql_password, mysql_host]]):
+                exit("Нету логина, пароля пользователя и хоста (названия образа) базы данных "
+                     "для подключения бота к базе данных в переменных окружения!")
             else:
-                myDB["host"] = mysql_host if mysql_host else "localhost"
+                myDB["host"] = mysql_host
                 myDB["user"] = mysql_user
                 myDB["password"] = mysql_password
                 myDB["database"] = mysql_database if mysql_database else "Storage"

@@ -228,15 +228,16 @@ class VkBotFunctions:
         full_list = []
         task_list = [[i.start_date.time(), i.end_date.time(), i.task] for i in dates_of_tasks]
         for i in subjects:
-            lesson_start_time = lessons_start_end[i.lesson_number][0]
-            lesson_end_time = lessons_start_end[i.lesson_number][1]
-            is_place_empty = True
             if i.subject:
+                lesson_start_time = lessons_start_end[i.lesson_number][0]
+                lesson_end_time = lessons_start_end[i.lesson_number][1]
+                is_place_empty = True
                 for j in task_list:
                     if (j[0] < lesson_start_time < j[1]) or (j[0] < lesson_end_time < j[1]) or \
-                            (j[0] > lesson_start_time < j[1] < lesson_end_time > j[0]):
-                        if is_place_empty:
-                            is_place_empty = False
+                            (j[0] > lesson_start_time < j[1] < lesson_end_time > j[0]) or \
+                            (j[0] == lesson_start_time and j[1] == lesson_end_time):
+                        is_place_empty = False
+                        break
                 if is_place_empty:
                     full_list.append([lesson_start_time, lesson_end_time, i.subject,
                                       i.lesson_type, i.teacher, i.class_number, i.link])

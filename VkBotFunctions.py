@@ -256,20 +256,26 @@ class VkBotFunctions:
                              f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
             if len(full_list[sbj_tsk]) > 3:
                 if full_list[sbj_tsk][3]:
-                    full_sentence += f"\n{space * 4}Вид занятия: {full_list[sbj_tsk][3].split(new_line)[0]}"
+                    type_subj_l = full_list[sbj_tsk][3].split(new_line)
+                    if all(all(i == type_subj_l[j] for i in type_subj_l) for j in range(len(type_subj_l))):
+                        full_sentence += f"\n{space * 4}Вид занятия: {type_subj_l[0]}"
+                    else:
+                        full_sentence += f"\n{space * 4}Виды занятий: {', '.join(type_subj_l)}"
                 if full_list[sbj_tsk][4]:
                     if len(full_list[sbj_tsk][4].split(new_line)) == 1:
                         full_sentence += f"\n{space * 4}Препод: {full_list[sbj_tsk][4]} "
                     else:
                         full_sentence += f"\n{space * 4}Преподы: {full_list[sbj_tsk][4].replace(new_line, f'{new_line}{space * 13} ')}"
                 if full_list[sbj_tsk][5]:
-                    if len(full_list[sbj_tsk][5].split(new_line)) == 1:
-                        full_sentence += f"\n{space * 4}Аудитория: {full_list[sbj_tsk][5].replace(new_line, ', ')}"
+                    audit_subj_l = full_list[sbj_tsk][5].split(new_line)
+                    if len(audit_subj_l) == 1 or \
+                            all(all(i == audit_subj_l[j] for i in audit_subj_l) for j in range(len(audit_subj_l))):
+                        full_sentence += f"\n{space * 4}Аудитория: {audit_subj_l[0]}"
                     else:
                         full_sentence += f"\n{space * 4}Аудитории: {full_list[sbj_tsk][5].replace(new_line, ', ')}"
                 if full_list[sbj_tsk][6]:
                     if len(full_list[sbj_tsk][6].split(new_line)) == 1:
-                        full_sentence += f"\n{space * 4}Ссылка: {full_list[sbj_tsk][6].replace(new_line, ', ')}"
+                        full_sentence += f"\n{space * 4}Ссылка: {full_list[sbj_tsk][6]}"
                     else:
                         full_sentence += f"\n{space * 4}Ссылки: {full_list[sbj_tsk][6].replace(new_line, f'{new_line}{space * 12} ')}."
             full_sentence += "\n"

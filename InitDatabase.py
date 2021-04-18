@@ -1,3 +1,5 @@
+from colorama import Fore, Style
+
 from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_tasks, Lesson_start_end, Users_communities
 
 
@@ -20,7 +22,7 @@ class InitDatabase:
         ]
         if len([i for i in Users_groups.select().limit(1).execute()]) == 0:
             Users_groups.insert_many(users_data).execute()
-            print("Начальные значения добавлены в таблицу 'Users'!")
+            print(Fore.LIGHTBLUE_EX + "Начальные значения добавлены в таблицу 'Users'!" + Style.RESET_ALL)
 
     @staticmethod
     def _ensure_communities_added() -> None:
@@ -33,4 +35,4 @@ class InitDatabase:
         ]
         if len([i for i in Users_communities.select().limit(1).execute()]) == 0:
             Users_communities.insert_many(users_communities).execute()
-            print("Начальные значения добавлены в таблицу 'Users_communities'!")
+            print(Fore.LIGHTBLUE_EX + "Начальные значения добавлены в таблицу 'Users_communities'!" + Style.RESET_ALL)

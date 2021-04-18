@@ -61,7 +61,7 @@ class VkBotFunctions:
         """
         keyboard = VkKeyboard(one_time=True)
 
-        if user_message == 'Продолжить':
+        if user_message == 'Продолжить' or user_message == 'Назад':
             keyboard.add_button('Расписание', color=VkKeyboardColor.PRIMARY)
             keyboard.add_button('Задачи', color=VkKeyboardColor.POSITIVE)
             keyboard.add_line()
@@ -76,6 +76,8 @@ class VkBotFunctions:
             keyboard.add_line()
             keyboard.add_button('Какая неделя?')
             keyboard.add_button('Какая группа?')
+            keyboard.add_line()
+            keyboard.add_button('Назад')
 
         if user_message == 'мем':
             keyboard.add_button('Случайный мем', color=VkKeyboardColor.PRIMARY)
@@ -84,12 +86,16 @@ class VkBotFunctions:
             keyboard.add_button('Удалить сообщество', color=VkKeyboardColor.NEGATIVE)
             keyboard.add_line()
             keyboard.add_button('Мои сообщества')
+            keyboard.add_line()
+            keyboard.add_button('Назад')
 
         if user_message == 'задачи':
             keyboard.add_button('Добавить задачу', color=VkKeyboardColor.POSITIVE)
             keyboard.add_button('Удалить задачу', color=VkKeyboardColor.NEGATIVE)
             keyboard.add_line()
             keyboard.add_button('Изменить задачу', color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
+            keyboard.add_button('Назад')
 
         if user_message == 'клавиатура--отмена':
             if buttons != 0:

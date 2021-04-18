@@ -57,7 +57,7 @@ class VkBotChat:
         else:
             user_message = user_message.lower()
             if user_message == 'начать':
-                self.send_message(message='Привет, чтобы открыть все возможности бота напиши свою группу'
+                self.send_message(message='Привет, чтобы открыть возможности бота для расписания напиши свою группу'
                                           '\nФорма записи группы: ИКБО-03-19.')
 
             elif search(r'([а-я]{4}-\d{2}-\d{2})', user_message):
@@ -171,6 +171,11 @@ class VkBotChat:
                                        "Используются дефолтные сообщества бота:"
                     self.send_message((bot_message + "\n" if bot_message else "") +
                                       "\n".join([f"{str(i + 1)}) {list_comm[i]}" for i in range(len(list_comm))]))
+
+            elif user_message == 'назад':
+                self._flag = False
+                keyboard = self._functions.create_menu("Назад")
+                self.send_message(message='Возвращаемся...\nЧто хочешь посмотреть?', keyboard=keyboard)
 
             else:
                 self.send_message(message='Я не знаю такой команды.')

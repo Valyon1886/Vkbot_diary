@@ -117,6 +117,7 @@ class Parser:
         num_cols = sheet.ncols
         group_count = -1
         day_count = -1
+        print_status_in = num_cols // 15
 
         existing_records = [
             {
@@ -137,6 +138,8 @@ class Parser:
             day_count = day_max_count
 
         for col_index in range(num_cols):
+            if col_index % print_status_in == 0:
+                print(Fore.YELLOW + f"Прогресс: {int((col_index / num_cols) * 100)}%" + Style.RESET_ALL)
             group_cell = str(sheet.cell(1, col_index).value)
             if search(r'.{4}-\d{2}-\d{2}', group_cell):
                 for day in range(6):

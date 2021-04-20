@@ -38,4 +38,4 @@ class SpeechRecognizer:
             user_message = req.recognize_google(audio, language="ru-RU")
             return user_message
         except sr.UnknownValueError:
-            return 'пустое сообщение'
+            return 'непонятное сообщение'

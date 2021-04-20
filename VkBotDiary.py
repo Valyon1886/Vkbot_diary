@@ -1,6 +1,6 @@
 from os import chdir
 from sys import exit
-from threading import Thread
+from threading import Thread, enumerate as threads
 from time import sleep
 
 from vk_api import VkApi
@@ -55,9 +55,11 @@ def main() -> None:
     print(Fore.BLUE + "Соединение с базой данных установлено!" + Style.RESET_ALL)
     if Config.get_init_database():
         InitDatabase.ensure_start_data_added()
-    thread_1 = Thread(target=checking_schedule_on_changes)
-    print(Fore.CYAN + "Бот запустил поток проверки расписания!" + Style.RESET_ALL)
-    thread_1.start()
+    if "checking_schedule_on_changes" not in [i.name for i in threads()]:
+        thread_1 = Thread(target=checking_schedule_on_changes, name="checking_schedule_on_changes")
+        thread_1.daemon = True
+        print(Fore.CYAN + "Бот запустил поток проверки расписания!" + Style.RESET_ALL)
+        thread_1.start()
     vk_session_user = None
     if Config.get_user_info():
         chdir(Config.get_dir_name())
@@ -82,7 +84,10 @@ def main() -> None:
             user_message = event.text
             if "attach1_kind" in event.attachments and event.attachments["attach1_kind"] == 'audiomsg':
                 attachs = eval(event.attachments["attachments"])
-                user_message = SpeechRecognizer.get_phrase(attachs[0]['audio_message']['link_mp3']).lower()
+                try:
+                    user_message = SpeechRecognizer.get_phrase(attachs[0]['audio_message']['link_mp3']).lower()
+                except ValueError:
+                    user_message = "ошибка при обработке звукового сообщения"
             bot = VkBotChat(vk_session, event.user_id, vk_session_user)
             bot.get_response(user_message)
 

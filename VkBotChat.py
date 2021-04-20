@@ -177,6 +177,13 @@ class VkBotChat:
                 keyboard = self._functions.create_menu("Назад")
                 self.send_message(message='Возвращаемся...\nЧто хочешь посмотреть?', keyboard=keyboard)
 
+            elif user_message == 'непонятное сообщение':
+                self.send_message("Бот не распознал в звуковом сообщении ни слова!")
+
+            elif user_message == 'ошибка при обработке звукового сообщения':
+                self.send_message("Ошибка: Бот не распознал звуковое сообщение\n"
+                                  "Не найден ffmpeg для транскодинга звукового сообщения!")
+
             else:
                 self.send_message(message='Я не знаю такой команды.')
 

@@ -10,11 +10,10 @@ services:
         MYSQL_ROOT_HOST: "%"
         MYSQL_USER: test_user
         MYSQL_PASSWORD: test_password
-    ports:
-      - "3306:3306"
   vkbotdiary:
     image: druzai/vkbotdiary:latest
     command: sh -c "./wait-script && python ./VkBotDiary.py"
+    restart: always
     depends_on:
       - db
     links:

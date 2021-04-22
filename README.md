@@ -146,6 +146,7 @@ services:
   vkbotdiary:
     build: ./
     command: sh -c "./wait-script && python ./VkBotDiary.py"
+    restart: always
     depends_on:
       - db
     links:

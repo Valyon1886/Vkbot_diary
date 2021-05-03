@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from random import randint, choice
 from typing import Tuple
+from re import findall
 
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from peewee import DoesNotExist
@@ -232,6 +233,7 @@ class VkBotFunctions:
             subjects = []
             full_sentence += "Данные по расписанию не доступны\n"
 
+        week_number = VkBotFunctions._get_number_week(day_date)
         full_list = []
         task_list = [[i.start_date.time(), i.end_date.time(), i.task] for i in dates_of_tasks]
         for i in subjects:
@@ -245,6 +247,26 @@ class VkBotFunctions:
                             (j[0] == lesson_start_time and j[1] == lesson_end_time):
                         is_place_empty = False
                         break
+                if "н." in i.subject.lower() and "кр." not in i.subject.lower() and is_place_empty:
+                    search_range = [str_i.split("н.")[0] for str_i in i.subject.split("\n")
+                                    if findall(r"\d+", str_i.split("н.")[0])]
+                    is_place_empty_list = []
+                    for search_string in search_range:
+                        is_place_empty = True
+                        matches = findall(r"\d+-\d+", search_string)
+                        if len(matches) > 0:
+                            for f in matches:
+                                if int(f.split("-")[0]) > week_number or week_number > int(f.split("-")[1]):
+                                    is_place_empty = False
+                                    break
+                            is_place_empty_list.append(is_place_empty)
+                        matches = findall(r"\d+", search_string)
+                        if len(matches) > 0:
+                            if not any([int(q) == week_number for q in matches]):
+                                is_place_empty_list.append(False)
+                            else:
+                                is_place_empty_list.append(True)
+                    is_place_empty = any(is_place_empty_list) if len(is_place_empty_list) != 0 else True
                 if is_place_empty:
                     full_list.append([lesson_start_time, lesson_end_time, i.subject,
                                       i.lesson_type, i.teacher, i.class_number, i.link])
@@ -253,8 +275,8 @@ class VkBotFunctions:
 
         for sbj_tsk in range(len(full_list)):
             full_sentence += space * 2 + f"С {full_list[sbj_tsk][0].strftime('%H:%M')} " \
-                             f"по {full_list[sbj_tsk][1].strftime('%H:%M')}" \
-                             f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
+                                         f"по {full_list[sbj_tsk][1].strftime('%H:%M')}" \
+                                         f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
             if len(full_list[sbj_tsk]) > 3:
                 if full_list[sbj_tsk][3]:
                     type_subj_l = full_list[sbj_tsk][3].split(new_line)

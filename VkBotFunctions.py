@@ -179,7 +179,8 @@ class VkBotFunctions:
                         full_sentence += f"\n{week_day} - выходной.\n\n"
                 return f'Расписание {user_message}: {full_sentence}'
         elif user_message == "какая неделя?":
-            return f'Сейчас {str(self._get_number_week(datetime.now()))} неделя.'
+            week_number = self._get_number_week(datetime.now())
+            return f'Сейчас {str(week_number)} неделя. {"Чётная" if week_number % 2 == 0 else "Нечётная"}.'
         elif user_message == "какая группа?":
             return f'Твоя группа {group}.'
         else:

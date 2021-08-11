@@ -110,7 +110,7 @@ pip install -r requirements.txt
 <!---->
 **Dockerfile**
 ```dockerfile
-FROM python:3.8.5-slim
+FROM python:3.8.10-slim
 
 # copy bot files and its requirements
 WORKDIR /VkBotDiary/

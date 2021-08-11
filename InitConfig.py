@@ -3,6 +3,8 @@ from os.path import isfile, exists
 from pathlib import Path
 from sys import exit
 from json import dump, load
+from dateparser import parse as date_parse
+import datetime
 
 from colorama import Fore, Style, init as c_init
 
@@ -33,7 +35,7 @@ class Config:
         """Сохраняет файл конфигурации"""
         try:
             with open(file=Path(Config._dir_name + '/' + Config._config_name), mode="w", encoding="utf-8") as conf_file:
-                dump(Config._config_dict, conf_file, indent=2)
+                dump(Config._config_dict, conf_file, indent=2, ensure_ascii=False)
         except FileNotFoundError:
             Config.save_config()
 
@@ -60,7 +62,7 @@ class Config:
             Первый ли раз вызывается данная функция
         """
         env_vars = {}
-        for var in ["BOT_TOKEN", "BOT_USER_LOGIN", "BOT_USER_PASSWORD",
+        for var in ["BOT_TOKEN", "BOT_USER_LOGIN", "BOT_USER_PASSWORD", "START_WEEK", "PRE_EXAM_WEEK",
                     "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE", "MYSQL_HOST", "BOT_AWAIT_TIME"]:
             try:
                 var_value = environ[var]
@@ -86,6 +88,24 @@ class Config:
             changes_made = True
             Config._set_user_info(user_login=env_vars.get("BOT_USER_LOGIN", None),
                                   user_password=env_vars.get("BOT_USER_PASSWORD", None))
+
+        if Config._config_dict.get("weeks_times", None) is None:
+            changes_made = True
+            Config._set_weeks_info(start_week=env_vars.get("START_WEEK", None),
+                                   pre_exam_week=env_vars.get("PRE_EXAM_WEEK", None))
+        else:
+            weeks_times = {}
+            for k, v in Config._config_dict["weeks_times"].items():
+                if k == "start_week":
+                    # Get Monday 00:00
+                    weeks_times[k] = date_parse(v) - datetime.timedelta(days=date_parse(v).weekday() % 7)
+                    weeks_times[k] = datetime.datetime.combine(weeks_times[k].date(), datetime.datetime.min.time())
+                else:
+                    # Get Sunday 23:59
+                    weeks_times[k] = date_parse(v) - datetime.timedelta(days=date_parse(v).isoweekday() % 7) + \
+                                     datetime.timedelta(days=7)
+                    weeks_times[k] = datetime.datetime.combine(weeks_times[k].date(), datetime.datetime.max.time())
+            Config._config_dict["weeks_times"] = weeks_times
 
         if Config._config_dict.get("mysqldb", None) is None:
             changes_made = True
@@ -181,6 +201,48 @@ class Config:
             return Config._config_dict.get("user_login", None), Config._config_dict.get("user_password", None)
         else:
             return None
+
+    @staticmethod
+    def _set_weeks_info(start_week=None, pre_exam_week=None):
+        """Устанавливает даты начала семестра и зачётной недели для бота
+
+        Parameters
+        ----------
+        start_week: str or None
+            дата начала семестра
+        pre_exam_week: str or None
+            дата зачётной недели
+        """
+        weeks_times = {}
+        if Config._runned_from_docker:
+            if any([i is None for i in [start_week, pre_exam_week]]):
+                exit("Нету даты начала семестра и даты зачётной недели семестра в переменных окружения!")
+            else:
+                weeks_times["start_week"] = start_week
+                weeks_times["pre_exam_week"] = pre_exam_week
+        else:
+            while all(weeks_times.get(j, None) is None for j in ["start_week", "pre_exam_week"]):
+                for i in ["start_week", "pre_exam_week"]:
+                    if weeks_times.get(i, None) is None:
+                        datetime_text = input(
+                            f"Введите дату {'начала семестра' if i == 'start_week' else 'зачётной недели семестра'}: ")
+                        print(f"Дата {'начала семестра' if i == 'start_week' else 'зачётной недели семестра'} "
+                              f"поставлена на {date_parse(datetime_text).strftime('%d.%m.%Y %H:%M')}. Продолжить? Y/n")
+                        if input().lower() == "y":
+                            weeks_times[i] = datetime_text
+
+        Config._config_dict["weeks_times"] = weeks_times
+
+    @staticmethod
+    def get_weeks_info() -> dict or None:
+        """Возвращает даты начала семестра и зачётной недели для бота
+
+        Return
+        ----------
+        weeks: dict
+            словарь с датами начала семестра и зачётной недели в виде datetime объекта
+        """
+        return Config._config_dict.get("weeks_times", None)
 
     @staticmethod
     def _set_database_info(mysql_host=None, mysql_user=None, mysql_password=None, mysql_database=None) -> None:

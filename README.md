@@ -94,6 +94,8 @@ pip install -r requirements.txt
   * `BOT_TOKEN`: токен вк бота сообщества, **обязательно вставить!**
   * `BOT_USER_LOGIN`: логин пользователя, через которого работают команды связанные с мемами, ***по желанию*, можно не указывать (удалить из списка)**
   * `BOT_USER_PASSWORD`: пароль пользователя, через которого работают команды связанные с мемами, ***по желанию*, можно не указывать (удалить из списка)**
+  * `START_WEEK`: дата начала семестра, вводится в формате `mm/dd/yy`, **обязательно вставить!**
+  * `PRE_EXAM_WEEK`: дата зачётной недели семестра, вводится в формате `mm/dd/yy`, **обязательно вставить!**
   * `MYSQL_HOST`: имя контейнера базы данных mySQL, **менять если вы поменяли имя контейнера базы данных**
   * `MYSQL_USER`: имя пользователя базы данных mySQL, **менять если вы хотите использовать другого пользователя вместо `root` для базы данных**
   * `MYSQL_PASSWORD`: пароль пользователя базы данных mySQL, **менять если вы хотите используете другой пароль пользователя или другого пользователя для базы данных**
@@ -141,10 +143,12 @@ services:
     container_name: db
     restart: always
     environment:
-        MYSQL_ROOT_PASSWORD: root_password
-        MYSQL_ROOT_HOST: "%"
-        MYSQL_USER: test_user
-        MYSQL_PASSWORD: test_password
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: test_password
+    volumes:
+      - "./DB_data:/var/lib/mysql:rw" # links database data to store in ./DB_data folder
     ports:
       - "3306:3306"
   vkbotdiary:
@@ -156,18 +160,22 @@ services:
     links:
       - db
     environment:
-        WAIT_HOSTS: "db:3306"
-        WAIT_HOSTS_TIMEOUT: 300
-        WAIT_SLEEP_INTERVAL: 5
-        WAIT_HOST_CONNECT_TIMEOUT: 10
-        BOT_TOKEN: "your-vk-bot-token-here"
-        BOT_USER_LOGIN: "vk-user-login"
-        BOT_USER_PASSWORD: "vk-user-password"
-        MYSQL_HOST: "db"
-        MYSQL_USER: "root"
-        MYSQL_PASSWORD: "root_password"
-        MYSQL_DATABASE: "Your-Database"
-        BOT_AWAIT_TIME: 3600
+      WAIT_HOSTS: "db:3306"
+      WAIT_HOSTS_TIMEOUT: 300
+      WAIT_SLEEP_INTERVAL: 5
+      WAIT_HOST_CONNECT_TIMEOUT: 10
+      BOT_TOKEN: "your-vk-bot-token-here"
+      BOT_USER_LOGIN: "vk-user-login"
+      BOT_USER_PASSWORD: "vk-user-password"
+      START_WEEK: "mm/dd/yy"
+      PRE_EXAM_WEEK: "mm/dd/yy"
+      MYSQL_HOST: "db"
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD: "root_password"
+      MYSQL_DATABASE: "Your-Database"
+      BOT_AWAIT_TIME: 3600
+    volumes:
+      - "./bot_local_files:/VkBotDiary/local_files:rw" # links bot config files in ./bot_local_file
 ```
 Настройка значений переменных окружения, сборка и запуск контейнера аналогична описанию выше.
 

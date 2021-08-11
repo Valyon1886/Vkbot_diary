@@ -6,10 +6,12 @@ services:
     container_name: db
     restart: always
     environment:
-        MYSQL_ROOT_PASSWORD: root_password
-        MYSQL_ROOT_HOST: "%"
-        MYSQL_USER: test_user
-        MYSQL_PASSWORD: test_password
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_USER: test_user
+      MYSQL_PASSWORD: test_password
+    volumes:
+      - "./DB_data:/var/lib/mysql:rw" # links database data to store in ./DB_data folder
   vkbotdiary:
     image: druzai/vkbotdiary:latest
     command: sh -c "./wait-script && python ./VkBotDiary.py"
@@ -19,15 +21,19 @@ services:
     links:
       - db
     environment:
-        WAIT_HOSTS: "db:3306"
-        WAIT_HOSTS_TIMEOUT: 300
-        WAIT_SLEEP_INTERVAL: 5
-        WAIT_HOST_CONNECT_TIMEOUT: 10
-        BOT_TOKEN: "your-vk-bot-token-here"
-        BOT_USER_LOGIN: "vk-user-login"
-        BOT_USER_PASSWORD: "vk-user-password"
-        MYSQL_HOST: "db"
-        MYSQL_USER: "root"
-        MYSQL_PASSWORD: "root_password"
-        MYSQL_DATABASE: "Your-Database"
-        BOT_AWAIT_TIME: 3600
+      WAIT_HOSTS: "db:3306"
+      WAIT_HOSTS_TIMEOUT: 300
+      WAIT_SLEEP_INTERVAL: 5
+      WAIT_HOST_CONNECT_TIMEOUT: 10
+      BOT_TOKEN: "your-vk-bot-token-here"
+      BOT_USER_LOGIN: "vk-user-login"
+      BOT_USER_PASSWORD: "vk-user-password"
+      START_WEEK: "mm/dd/yy"
+      PRE_EXAM_WEEK: "mm/dd/yy"
+      MYSQL_HOST: "db"
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD: "root_password"
+      MYSQL_DATABASE: "Your_Database"
+      BOT_AWAIT_TIME: 3600
+    volumes:
+      - "./bot_local_files:/VkBotDiary/local_files:rw" # links bot config files in ./bot_local_file

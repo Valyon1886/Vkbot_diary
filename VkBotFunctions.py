@@ -5,7 +5,7 @@ from re import findall
 
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from peewee import DoesNotExist
-
+from InitConfig import Config
 from MySQLStorage import Users_communities, Weeks, Days, Subjects, Lesson_start_end, Users_tasks
 
 
@@ -140,6 +140,15 @@ class VkBotFunctions:
         full_sentence: str
             сообщение для пользователя
         """
+        if user_message == "какая группа?":
+            return f'Твоя группа {group}.'
+
+        if datetime.now() < Config.get_weeks_info()["start_week"]:
+            return "Семестр ещё не начался, расписания нет. Ждём..."
+
+        if Config.get_weeks_info()["pre_exam_week"] < datetime.now():
+            return "Семестр закончился, расписание не действительно. Подожди до следующего семестра"
+
         if user_message in ["на сегодня", "на завтра", "на эту неделю", "на следующую неделю"]:
             lessons_start_end = {i.lesson_number: [i.start_time, i.end_time]
                                  for i in Lesson_start_end.select().execute()}
@@ -182,10 +191,6 @@ class VkBotFunctions:
         elif user_message == "какая неделя?":
             week_number = self._get_number_week(datetime.now())
             return f'Сейчас {str(week_number)} неделя. {"Чётная" if week_number % 2 == 0 else "Нечётная"}.'
-        elif user_message == "какая группа?":
-            return f'Твоя группа {group}.'
-        else:
-            return "Я не знаю такой команды."
 
     def _make_schedule(self, group: str, week_day: str,
                        day_date: datetime, lessons_start_end: dict, next_week=False) -> str:
@@ -317,7 +322,7 @@ class VkBotFunctions:
         number: int
             номер недели
         """
-        first_week = datetime(2021, 2, 10).isocalendar()[1]
+        first_week = Config.get_weeks_info()["start_week"].isocalendar()[1]
         current_week = day_today.isocalendar()[1]
         number = current_week - first_week + 1
         return number

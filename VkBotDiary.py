@@ -2,6 +2,7 @@ from os import chdir
 from sys import exit
 from threading import Thread, enumerate as threads
 from time import sleep
+from datetime import datetime
 
 from vk_api import VkApi
 from vk_api.exceptions import BadPassword, ApiError
@@ -21,7 +22,6 @@ from SpeechRecognizer import SpeechRecognizer
 #  1. Расписание (реализовано) ✓
 #  2. Пользователи/настройки (реализовано) ✓
 #  3. Задачи (реализованы) ✓
-#  Мб ещё прикрутить работу со всеми институтами, это не сложно
 #  Добавить в ответы бота смайлики, Серёге надо)
 #  Вывод расписания в виде картинки
 
@@ -34,9 +34,14 @@ def ensure_tables_created() -> None:
 def checking_schedule_on_changes() -> None:
     """Проверка расписания на изменения с заданным периодом ожидания"""
     while True:
-        print(Fore.MAGENTA + "Начинаем парсинг файлов расписания..." + Style.RESET_ALL)
-        all_files_downloaded = Parser.download_schedules()
-        print(Fore.MAGENTA + "Парсинг файлов расписания завершён!" + Style.RESET_ALL)
+        all_files_downloaded = True
+        if Config.get_weeks_info()["start_week"] <= datetime.now() <= Config.get_weeks_info()["pre_exam_week"]:
+            print(Fore.MAGENTA + "Начинаем парсинг файлов расписания..." + Style.RESET_ALL)
+            all_files_downloaded = Parser.download_schedules()
+            print(Fore.MAGENTA + "Парсинг файлов расписания завершён!" + Style.RESET_ALL)
+        else:
+            print(Fore.MAGENTA + "Парсинг файлов расписания не произведён, т. к. семестр ещё не начался/уже закончился!"
+                  + Style.RESET_ALL)
         sleep(Config.get_await_time() if all_files_downloaded else 60)
 
 

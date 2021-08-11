@@ -1,12 +1,12 @@
-from re import search, findall
 from datetime import time
 from hashlib import md5
+from re import search, findall
 
-from xlrd import open_workbook
-from requests import get
 from bs4 import BeautifulSoup
-from peewee import fn, DoesNotExist
 from colorama import Fore, Style
+from peewee import fn, DoesNotExist
+from requests import get
+from xlrd import open_workbook
 
 from InitConfig import Config
 from InitSQL import InitSQL

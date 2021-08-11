@@ -1,21 +1,20 @@
+from datetime import datetime
 from io import BytesIO
-from re import search, findall
-from re import split as re_split
 from random import randint, choice
+from re import search, findall, split as re_split
 
+from dateparser import parse as date_parse
+from peewee import DoesNotExist
 from requests import get as req_get
 from vk_api import VkUpload, VkApi
-from vk_api.utils import get_random_id
-from vk_api.keyboard import VkKeyboard
 from vk_api.exceptions import ApiError
-from peewee import DoesNotExist
-from datetime import datetime
-from dateparser import parse as date_parse
+from vk_api.keyboard import VkKeyboard
+from vk_api.utils import get_random_id
 
-from VkBotFunctions import VkBotFunctions
-from VkBotStatus import States, VkBotStatus
 from MySQLStorage import Users_groups, Weeks, Users_tasks
+from VkBotFunctions import VkBotFunctions
 from VkBotParser import Parser
+from VkBotStatus import States, VkBotStatus
 
 
 class VkBotChat:
@@ -58,7 +57,7 @@ class VkBotChat:
             user_message = user_message.lower()
             if user_message == 'начать':
                 self.send_message(message='Привет, чтобы открыть возможности бота для расписания напиши свою группу'
-                                          '\nФорма записи группы: ИКБО-03-19.')
+                                          '\nПример формы записи группы: ИКБО-03-19.')
 
             elif search(r'([а-я]{4}-\d{2}-\d{2})', user_message):
                 if len([i for i in Weeks.select().where(Weeks.group == user_message.upper()).execute()]) > 0:
@@ -88,7 +87,7 @@ class VkBotChat:
                             if user_message != 'какая неделя?' else None
                         self.send_message(self._functions.schedule_menu(user_message, group))
                     except DoesNotExist:
-                        self.send_message(message='Вы не ввели группу.\nФормат ввода: ИКБО-03-19.')
+                        self.send_message(message='Вы не ввели группу.\nПример формата ввода: ИКБО-03-19.')
 
             elif user_message == 'задачи':
                 self._flag = False
@@ -185,7 +184,9 @@ class VkBotChat:
                                   "Не найден ffmpeg для транскодинга звукового сообщения!")
 
             else:
-                self.send_message(message='Я не знаю такой команды.')
+                self.send_message(message='Я не знаю такой команды.\nДополнительные команды:\n'
+                                          'XXXX-XX-XX - Запоминает введённую группу, например ИКБО-03-19).\n'
+                                          'Остальные команды можно вводить, используя клавиатуру вк внизу.')
 
         if self._flag:
             keyboard = self._functions.create_menu("Продолжить")

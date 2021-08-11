@@ -1,12 +1,12 @@
+import datetime
+from json import dump, load
 from os import makedirs, environ
 from os.path import isfile, exists
 from pathlib import Path
 from sys import exit
-from json import dump, load
-from dateparser import parse as date_parse
-import datetime
 
 from colorama import Fore, Style, init as c_init
+from dateparser import parse as date_parse
 
 
 class Config:

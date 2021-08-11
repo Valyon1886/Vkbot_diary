@@ -1,21 +1,21 @@
+from datetime import datetime
 from os import chdir
 from sys import exit
 from threading import Thread, enumerate as threads
 from time import sleep
-from datetime import datetime
 
+from colorama import Fore, Style
 from vk_api import VkApi
 from vk_api.exceptions import BadPassword, ApiError
 from vk_api.longpoll import VkLongPoll, VkEventType
-from colorama import Fore, Style
 
 from InitConfig import Config
-from VkBotParser import Parser
-from VkBotChat import VkBotChat
+from InitDatabase import InitDatabase
 from InitSQL import InitSQL
 from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_tasks, Lesson_start_end, Users_communities
-from InitDatabase import InitDatabase
 from SpeechRecognizer import SpeechRecognizer
+from VkBotChat import VkBotChat
+from VkBotParser import Parser
 
 
 # TODO:

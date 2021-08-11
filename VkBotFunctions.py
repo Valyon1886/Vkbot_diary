@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 from random import randint, choice
-from typing import Tuple
 from re import findall
+from typing import Tuple
 
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from peewee import DoesNotExist
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
+
 from InitConfig import Config
 from MySQLStorage import Users_communities, Weeks, Days, Subjects, Lesson_start_end, Users_tasks
 

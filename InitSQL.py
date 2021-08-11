@@ -1,9 +1,9 @@
-from os.path import basename
 from os import getcwd
+from os.path import basename
 from sys import exit
 
-from peewee import *
 from colorama import Fore, Style
+from peewee import *
 
 from InitConfig import Config
 

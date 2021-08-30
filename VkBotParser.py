@@ -1,3 +1,4 @@
+from contextlib import suppress
 from datetime import time
 from hashlib import md5
 from re import search, findall
@@ -52,7 +53,8 @@ class Parser:
         soup = BeautifulSoup(page.text, "html.parser")
         uni_names = soup.find("div", {"class": "rasspisanie"}).find_all("a", {"class": "uk-text-bold"})
         uni_names = list(set([i.contents[0] for i in uni_names]))
-        uni_names.remove("Институт вечернего и заочного образования")
+        with suppress(ValueError):
+            uni_names.remove("Институт вечернего и заочного образования")
         for name in uni_names:
             links = soup.find("div", {"class": "rasspisanie"}). \
                 find(string=name). \

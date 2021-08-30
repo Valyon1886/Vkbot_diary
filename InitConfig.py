@@ -14,6 +14,7 @@ class Config:
     _dir_name = "local_files"
     _config_name = "config.json"
     _config_dict = {}
+    _weeks_times = {}
     _runned_from_docker = False
 
     @staticmethod
@@ -93,19 +94,19 @@ class Config:
             changes_made = True
             Config._set_weeks_info(start_week=env_vars.get("START_WEEK", None),
                                    pre_exam_week=env_vars.get("PRE_EXAM_WEEK", None))
-        else:
-            weeks_times = {}
-            for k, v in Config._config_dict["weeks_times"].items():
-                if k == "start_week":
-                    # Get Monday 00:00
-                    weeks_times[k] = date_parse(v) - datetime.timedelta(days=date_parse(v).weekday() % 7)
-                    weeks_times[k] = datetime.datetime.combine(weeks_times[k].date(), datetime.datetime.min.time())
-                else:
-                    # Get Sunday 23:59
-                    weeks_times[k] = date_parse(v) - datetime.timedelta(days=date_parse(v).isoweekday() % 7) + \
-                                     datetime.timedelta(days=7)
-                    weeks_times[k] = datetime.datetime.combine(weeks_times[k].date(), datetime.datetime.max.time())
-            Config._config_dict["weeks_times"] = weeks_times
+
+        for k, v in Config._config_dict["weeks_times"].items():
+            if k == "start_week":
+                # Get Monday 00:00
+                Config._weeks_times[k] = date_parse(v) - datetime.timedelta(days=date_parse(v).weekday() % 7)
+                Config._weeks_times[k] = datetime.datetime.combine(Config._weeks_times[k].date(),
+                                                                   datetime.datetime.min.time())
+            else:
+                # Get Sunday 23:59
+                Config._weeks_times[k] = date_parse(v) - datetime.timedelta(days=date_parse(v).isoweekday() % 7) + \
+                                         datetime.timedelta(days=7)
+                Config._weeks_times[k] = datetime.datetime.combine(Config._weeks_times[k].date(),
+                                                                   datetime.datetime.max.time())
 
         if Config._config_dict.get("mysqldb", None) is None:
             changes_made = True
@@ -234,7 +235,7 @@ class Config:
         Config._config_dict["weeks_times"] = weeks_times
 
     @staticmethod
-    def get_weeks_info() -> dict or None:
+    def get_weeks_info() -> dict:
         """Возвращает даты начала семестра и зачётной недели для бота
 
         Return
@@ -242,7 +243,7 @@ class Config:
         weeks: dict
             словарь с датами начала семестра и зачётной недели в виде datetime объекта
         """
-        return Config._config_dict.get("weeks_times", None)
+        return Config._weeks_times
 
     @staticmethod
     def _set_database_info(mysql_host=None, mysql_user=None, mysql_password=None, mysql_database=None) -> None:

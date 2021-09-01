@@ -78,16 +78,14 @@ class VkBotChat:
                 self.send_message(message='Выбери возможность', keyboard=keyboard)
 
             elif search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', user_message):
-                if Parser.get_bot_parsing_state() and search(r'(на [а-я]+( [а-я]+)?)', user_message):
-                    self.send_message(message='Бот обновляет расписание и данная команда временно не доступна.' +
-                                              ' Попробуйте позже.')
-                else:
-                    try:
-                        group = Users_groups.get(Users_groups.user_id == self._user_id).group \
-                            if user_message != 'какая неделя?' else None
-                        self.send_message(self._functions.schedule_menu(user_message, group))
-                    except DoesNotExist:
-                        self.send_message(message='Вы не ввели группу.\nПример формата ввода: ИКБО-03-19.')
+                try:
+                    group = Users_groups.get(Users_groups.user_id == self._user_id).group \
+                        if user_message != 'какая неделя?' else None
+                    self.send_message(self._functions.schedule_menu(user_message, group))
+                    if Parser.get_bot_parsing_state() and search(r'(на [а-я]+( [а-я]+)?)', user_message):
+                        self.send_message(message='Бот сейчас обновляет расписание и оно может поменяться.')
+                except DoesNotExist:
+                    self.send_message(message='Вы не ввели группу.\nПример формата ввода: ИКБО-03-19.')
 
             elif user_message == 'задачи':
                 self._flag = False

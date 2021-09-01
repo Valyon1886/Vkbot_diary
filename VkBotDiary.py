@@ -3,6 +3,7 @@ from os import chdir
 from sys import exit
 from threading import Thread, enumerate as threads
 from time import sleep
+from traceback import print_exc
 
 from colorama import Fore, Style
 from vk_api import VkApi
@@ -94,7 +95,12 @@ def main() -> None:
                 except ValueError:
                     user_message = "ошибка при обработке звукового сообщения"
             bot = VkBotChat(vk_session, event.user_id, vk_session_user)
-            bot.get_response(user_message)
+            try:
+                bot.get_response(user_message)
+            except BaseException:
+                bot.get_response(None)
+                print_exc()
+                exit()
 
 
 if __name__ == '__main__':

@@ -45,6 +45,12 @@ class VkBotChat:
         user_message: str
             сообщение пользователя
         """
+        if user_message is None:
+            self._flag = True
+            self.send_message("Ошибка 504: Бот задумался о природе гравитационного коллапса"
+                              "сверхмассивных объектов...\n"
+                              "Подождите 2 секунды и отправьте любой текст, чтобы пробудить его :)")
+
         if VkBotStatus.get_state(self._user_id) == States.ADD_COMMUNITY or \
                 VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY:
             user_message = user_message.lower()
@@ -175,10 +181,10 @@ class VkBotChat:
                 self.send_message(message='Возвращаемся...\nЧто хочешь посмотреть?', keyboard=keyboard)
 
             elif user_message == 'непонятное сообщение':
-                self.send_message("Бот не распознал в звуковом сообщении ни слова!")
+                self.send_message("Ошибка 404: Бот не распознал в звуковом сообщении ни слова!")
 
             elif user_message == 'ошибка при обработке звукового сообщения':
-                self.send_message("Ошибка: Бот не распознал звуковое сообщение\n"
+                self.send_message("Ошибка 404: Бот не распознал звуковое сообщение\n"
                                   "Не найден ffmpeg для транскодинга звукового сообщения!")
 
             else:

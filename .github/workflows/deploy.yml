@@ -2,7 +2,7 @@ name: Create and publish a Docker image
 
 on:
   push:
-    branches: 
+    branches:
       - main
     tags:
       - "*.*.*"
@@ -11,7 +11,9 @@ jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     env:
-      DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+      DOCKERHUB_USER: druzai
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+      DOCKERHUB_REPOSITORY: ${{ env.DOCKERHUB_USER }}/vkbotdiary
 
     steps:
       - uses: actions/checkout@v2
@@ -22,9 +24,6 @@ jobs:
           echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
 
       - name: Docker login
-        env:
-          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
-          DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
         run: |
           docker login -u $DOCKERHUB_USER -p $DOCKERHUB_ACCESS_TOKEN
 
@@ -37,5 +36,5 @@ jobs:
 
       - name: Docker push
         run: |
-          docker push $DOCKERHUB_REPOSITORY:latest
           docker push $DOCKERHUB_REPOSITORY:$SOURCE_TAG
+          docker push $DOCKERHUB_REPOSITORY:latest

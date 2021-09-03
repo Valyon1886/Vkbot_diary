@@ -106,33 +106,8 @@ pip install -r requirements.txt
 **Примечание:** Если в строке, которую выводите в значения переменных окружения, есть знак доллара, то его надо экранировать долларом. Пример: было так - `"fung$gbiobm"`, а надо так - `"fung$$gbiobm"`.
 
 ### Сборка образа своими руками
-Но если вы хотите сделать собственный образ и запустить его с базой данных, а не скачивать готовый, то в корневой папке проекта должно быть 2 файла: Dockerfile и изменённый docker-compose.yml
+Но если вы хотите сделать собственный образ и запустить его с базой данных, а не скачивать готовый, то в корневой папке проекта должно быть 2 файла: [Dockerfile](Dockerfile) и изменённый docker-compose.yml
 <!---->
-**Dockerfile**
-```dockerfile
-FROM python:3.8.10-slim
-
-# copy bot files and its requirements
-WORKDIR /VkBotDiary/
-ADD *.py /VkBotDiary/
-ADD requirements.txt /VkBotDiary/
-
-# install requirements
-RUN pip install -r requirements.txt
-
-# install ffmpeg and tzdata
-RUN apt-get update
-RUN apt-get -y install ffmpeg && apt-get install tzdata -y
-
-# setup time zone
-ENV TZ=Europe/Moscow
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# Add docker-compose-wait tool
-ENV WAIT_VERSION 2.7.3
-ADD https://github.com/ufoscout/docker-compose-wait/releases/download/$WAIT_VERSION/wait ./wait-script
-RUN chmod 775 ./wait-script
-```
 **docker-compose.yml**
 ```dockerfile
 version: '3.6'

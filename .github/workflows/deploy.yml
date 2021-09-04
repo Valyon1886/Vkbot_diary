@@ -13,7 +13,7 @@ jobs:
     env:
       DOCKERHUB_USER: druzai
       DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-      DOCKERHUB_REPOSITORY: ${{ env.DOCKERHUB_USER }}/vkbotdiary
+      DOCKERHUB_REPOSITORY: druzai/vkbotdiary
 
     steps:
       - uses: actions/checkout@v2

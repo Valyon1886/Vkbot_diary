@@ -69,7 +69,7 @@ pip install -r requirements.txt
 [make](https://www.gnu.org/software/make/), то для Windows есть .bat файл.
 
 ### Сборка документации
-Введите, находясь в [/docs](docs), в командной строке `make html`.
+Установите Сфинкс командой `pip install Sphinx==3.5.3`. Далее введите, находясь в [/docs](docs), в командной строке `make html`.
 <!---->
 Для чтения документации надо открыть index.html по пути docs/build/html/ в любом браузере.
 

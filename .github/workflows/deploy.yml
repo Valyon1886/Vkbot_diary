@@ -6,7 +6,9 @@ on:
       - main
     tags:
       - "*.*.*"
-  pull_request: null
+  pull_request:
+    tags:
+      - "*.*.*"
 
 jobs:
   build-and-push-image:

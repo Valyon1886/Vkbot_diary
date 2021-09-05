@@ -34,7 +34,7 @@ jobs:
           docker build -t $DOCKERHUB_REPOSITORY .
           docker tag $DOCKERHUB_REPOSITORY:latest $DOCKERHUB_REPOSITORY:$SOURCE_TAG
 
-#      - name: Docker push
-#        run: |
-#          docker push $DOCKERHUB_REPOSITORY:$SOURCE_TAG
-#          docker push $DOCKERHUB_REPOSITORY:latest
+      - name: Docker push
+        run: |
+          docker push $DOCKERHUB_REPOSITORY:$SOURCE_TAG
+          docker push $DOCKERHUB_REPOSITORY:latest

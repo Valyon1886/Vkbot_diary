@@ -7,7 +7,6 @@ on:
 
 jobs:
   create_release:
-    if: startsWith(github.ref, 'refs/tags/')
     name: Create release
     runs-on: ubuntu-latest
     outputs:
@@ -30,7 +29,6 @@ jobs:
           prerelease: false
 
   release_built_assets:
-    if: startsWith(github.ref, 'refs/tags/')
     name: Release built assets
     needs: create_release
     runs-on: ${{ matrix.os }}

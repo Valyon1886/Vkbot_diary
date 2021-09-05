@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "*.*.*"
 
 jobs:
   create_release:
@@ -78,7 +76,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./dist_build/Discord_bot
+          asset_path: ./build_dist/VkBotDiary
           asset_name: VkBotDiary_linux_x64_py_${{ matrix.python-version }}_${{ steps.commit.outputs.SOURCE_TAG }}
           asset_content_type: application/x-executable
 
@@ -89,7 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./dist_build/Discord_bot.exe
+          asset_path: ./build_dist/VkBotDiary.exe
           asset_name: VkBotDiary_windows_x64_py_${{ matrix.python-version }}_${{ steps.commit.outputs.SOURCE_TAG }}.exe
           asset_content_type: application/vnd.microsoft.portable-executable
 

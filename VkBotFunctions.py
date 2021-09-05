@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from random import randint, choice
 from re import findall
-from typing import Tuple
+from typing import Tuple, List
 
 from peewee import DoesNotExist
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -159,10 +159,8 @@ class VkBotFunctions:
                     week_day_number = datetime.now().isoweekday() - 1
                 else:
                     week_day_number = datetime.now().isoweekday()
-                    if week_day_number == 7:
-                        week_day_number = 0
-                if week_day_number < 6:
-                    week_day = self._week_days[week_day_number]
+                if week_day_number != 6:
+                    week_day = self._week_days[week_day_number % 7]
                     full_sentence = self._make_schedule(group, week_day, start_date + timedelta(days=week_day_number),
                                                         lessons_start_end)
                 else:
@@ -218,12 +216,7 @@ class VkBotFunctions:
         space = "&#8194;"
         new_line = '\n'
         even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
-        min_date = datetime.combine(day_date.date(), datetime.min.time())
-        max_date = datetime.combine(day_date.date(), datetime.max.time())
-
-        dates_of_tasks = [i for i in Users_tasks.select().where((Users_tasks.user_id == self._user_id) &
-                                                                (Users_tasks.start_date >= min_date) &
-                                                                (Users_tasks.start_date <= max_date)).execute()]
+        dates_of_tasks = self.get_user_tasks_on_day(day_date)
 
         try:
             day_of_group_id = Weeks.get((Weeks.group == group) & (Weeks.even == even_week)).days_of_group_id
@@ -327,6 +320,25 @@ class VkBotFunctions:
         current_week = day_today.isocalendar()[1]
         number = current_week - first_week + 1
         return number
+
+    def get_user_tasks_on_day(self, date_of_day: datetime) -> List[Users_tasks]:
+        """Получение задач пользователя на данный день.
+
+        Parameters
+        ----------
+        date_of_day: datetime
+            нужная дата
+        Return
+        ----------
+        users_tasks: List[Users_tasks]
+            лист из задач пользователя
+        """
+        min_date = datetime.combine(date_of_day.date(), datetime.min.time())
+        max_date = datetime.combine(date_of_day.date(), datetime.max.time())
+
+        return [i for i in Users_tasks.select().where((Users_tasks.user_id == self._user_id) &
+                                                      (Users_tasks.start_date >= min_date) &
+                                                      (Users_tasks.start_date <= max_date)).execute()]
 
     def send_meme(self, vk_session_user) -> Tuple[str, str]:
         """Отправляет пользователю случайный мем.

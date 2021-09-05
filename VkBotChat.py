@@ -36,6 +36,7 @@ class VkBotChat:
         self._functions = VkBotFunctions(user_id)
         self._vk_session_user = vk_session_user
         self._flag = True
+        self._404_url = "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg"
 
     def get_response(self, user_message) -> None:
         """Анализирует запрос пользователя и отвечает на него.
@@ -48,7 +49,7 @@ class VkBotChat:
         if user_message is None:
             self._flag = True
             self.send_message("Ошибка 504: Бот задумался о природе гравитационного коллапса"
-                              "сверхмассивных объектов...\n"
+                              " сверхмассивных объектов...\n"
                               "Подождите 2 секунды и отправьте любой текст, чтобы пробудить его :)")
 
         if VkBotStatus.get_state(self._user_id) == States.ADD_COMMUNITY or \
@@ -59,7 +60,7 @@ class VkBotChat:
                 VkBotStatus.get_state(self._user_id) != States.DELETE_COMMUNITY and \
                 VkBotStatus.get_state(self._user_id) != States.NONE:
             self._handle_add_delete_change_task(user_message)
-        else:
+        elif user_message is not None:
             user_message = user_message.lower()
             if user_message == 'начать':
                 self.send_message(message='Привет, чтобы открыть возможности бота для расписания напиши свою группу'
@@ -119,35 +120,27 @@ class VkBotChat:
 
             elif user_message == 'случайный мем':
                 if self._vk_session_user is None:
-                    self.send_pic(
-                        "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
-                        "Ошибка vk:  Не введён логин и пароль пользователя")
+                    self.send_message("Ошибка vk: Не введён логин и пароль пользователя", image_url=self._404_url)
                 else:
                     if bool(randint(0, 3)):
                         try:
                             photo_url, bot_message = self._functions.send_meme(self._vk_session_user)
-                            self.send_pic(photo_url, bot_message)
+                            self.send_message(bot_message, image_url=photo_url)
                         except ApiError:
-                            self.send_pic(
-                                "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
-                                "Ошибка vk:  Что-то пошло не так")
+                            self.send_message("Ошибка vk: Что-то пошло не так", image_url=self._404_url)
                     else:
                         self.send_message("Я бы мог рассказать что-то, но мне лень. ( ͡° ͜ʖ ͡°)")
 
             elif user_message == 'добавить сообщество':
                 if self._vk_session_user is None:
-                    self.send_pic(
-                        "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
-                        "Ошибка vk:  Не введён логин и пароль пользователя")
+                    self.send_message("Ошибка vk: Не введён логин и пароль пользователя", image_url=self._404_url)
                 else:
                     VkBotStatus.set_state(self._user_id, States.ADD_COMMUNITY)
                     self._create_cancel_menu(add_to_existing=True)
 
             elif user_message == 'удалить сообщество':
                 if self._vk_session_user is None:
-                    self.send_pic(
-                        "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
-                        "Ошибка vk:  Не введён логин и пароль пользователя")
+                    self.send_message("Ошибка vk: Не введён логин и пароль пользователя", image_url=self._404_url)
                 else:
                     comm_from_me, list_comm_urls = self._functions.show_users_communities(self._vk_session_user,
                                                                                           show_name=True, show_url=True)
@@ -162,9 +155,7 @@ class VkBotChat:
 
             elif user_message == 'мои сообщества':
                 if self._vk_session_user is None:
-                    self.send_pic(
-                        "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg",
-                        "Ошибка vk:  Не введён логин и пароль пользователя")
+                    self.send_message("Ошибка vk: Не введён логин и пароль пользователя", image_url=self._404_url)
                 else:
                     comm_from_me, list_comm = self._functions.show_users_communities(self._vk_session_user,
                                                                                      show_name=True)
@@ -196,36 +187,32 @@ class VkBotChat:
             keyboard = self._functions.create_menu("Продолжить")
             self.send_message(message='Что хочешь посмотреть?', keyboard=keyboard)
 
-    def send_message(self, message=None, keyboard=None) -> None:
-        """Анализирует запрос пользователя и отвечает на него.
+    def send_message(self, message, keyboard=None, image_url=None) -> None:
+        """Отсылает сообщение опционально с клавиатурой и/или изображением
 
         Parameters
         ----------
         message: str
-            сообщение для пользователя (по умолчанию None)
+            сообщение для пользователя
         keyboard: VkKeyboard
-            клавиатура доступная пользователю (по умолчанию None)
-        """
-        self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
-                                                  'random_id': get_random_id(), 'keyboard': keyboard})
-
-    def send_pic(self, image_url, message=None) -> None:
-        """Анализирует запрос пользователя и отвечает на него.
-
-        Parameters
-        ----------
+            клавиатура доступная пользователю
         image_url: str
             ссылка на изображение
-        message: str
-            сообщение для пользователя (по умолчанию None)
         """
-        arr = BytesIO(req_get(image_url).content)
-        arr.seek(0)
-        upload = VkUpload(self._vk_session)
-        photo = upload.photo_messages(arr)
-        image = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
-        self._vk_session.method('messages.send', {'user_id': self._user_id, 'message': message,
-                                                  'random_id': get_random_id(), "attachment": image})
+        payload = {
+            'user_id': self._user_id,
+            'message': message,
+            'random_id': get_random_id()
+        }
+        if keyboard:
+            payload['keyboard'] = keyboard
+        if image_url:
+            arr = BytesIO(req_get(image_url).content)
+            arr.seek(0)
+            upload = VkUpload(self._vk_session)
+            photo = upload.photo_messages(arr)
+            payload['attachment'] = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
+        self._vk_session.method('messages.send', payload)
 
     def _create_cancel_menu(self, message="", add_to_existing=False, buttons=0, list_of_named_buttons=None) -> None:
         """Создаёт меню "Отмена"
@@ -402,12 +389,7 @@ class VkBotChat:
                     else:
                         VkBotStatus.set_state(self._user_id, States.CHANGE_TASK_HAS_DATE, date)
 
-                    min_date = datetime.combine(date.date(), datetime.min.time())
-                    max_date = datetime.combine(date.date(), datetime.max.time())
-
-                    dates = [i for i in Users_tasks.select().where((Users_tasks.user_id == self._user_id) &
-                                                                   (Users_tasks.start_date >= min_date) &
-                                                                   (Users_tasks.start_date <= max_date)).execute()]
+                    dates = self._functions.get_user_tasks_on_day(date)
                     if len(dates) == 0:
                         VkBotStatus.set_state(self._user_id, States.NONE)
                         self.send_message(message="Задач на эту дату не существует.")

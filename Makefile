@@ -27,6 +27,5 @@ clear_lin:
 	@echo Очищено
 
 clear_win:
-	cmd /c "rd /s /q build"
-	del *.spec
+	cmd /c "rd /s /q build && del *.spec"
 	@echo Очищено

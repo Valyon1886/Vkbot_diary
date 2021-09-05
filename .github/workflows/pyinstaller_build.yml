@@ -12,10 +12,12 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
+      - name: Clone repository
+        uses: actions/checkout@v2
+
       - name: Get commit tag
         id: commit
-        run: |
-          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+        run: \.github\workflows\read_version.sh
 
       - name: Create release
         id: create_release
@@ -42,8 +44,7 @@ jobs:
 
       - name: Get commit tag
         id: commit
-        run: |
-          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+        run: \.github\workflows\read_version.sh
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2

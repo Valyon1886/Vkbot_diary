@@ -1,3 +1,2 @@
-PACKAGE_VERSION=$(python3 ./VkBotDiary.py -v)
-
+PACKAGE_VERSION='0.3.3'
 echo ::set-output name=SOURCE_TAG::$PACKAGE_VERSION

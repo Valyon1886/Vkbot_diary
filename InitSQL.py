@@ -1,13 +1,11 @@
 from os import getcwd
 from os.path import basename
-from sys import exit, argv
+from sys import exit
 
 from colorama import Fore, Style
 from peewee import *
 
 from InitConfig import Config
-
-version = "0.3.3"
 
 
 class InitSQL:
@@ -24,9 +22,6 @@ class InitSQL:
     @staticmethod
     def _init_DB() -> MySQLDatabase:
         """Инициализация соединения с базой данных и сохранение экземпляра"""
-        if len(argv) > 1 and argv[1].lower() == "-v":
-            print(version)
-            exit(0)
         Config.read_config()
         database_config = Config.get_database_info()
         tries = 0

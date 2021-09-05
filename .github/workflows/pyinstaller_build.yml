@@ -17,7 +17,7 @@ jobs:
 
       - name: Get commit tag
         id: commit
-        run: \.github\workflows\read_version.sh
+        run: ./.github/workflows/read_version.sh
 
       - name: Create release
         id: create_release
@@ -44,7 +44,7 @@ jobs:
 
       - name: Get commit tag
         id: commit
-        run: \.github\workflows\read_version.sh
+        run: ./.github/workflows/read_version.sh
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2

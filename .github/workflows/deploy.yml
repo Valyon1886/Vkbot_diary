@@ -18,7 +18,7 @@ jobs:
 
       - name: Get commit tag
         id: commit
-        run: \.github\workflows\read_version.sh
+        run: ./.github/workflows/read_version.sh
 
       - name: Docker login
         run: |

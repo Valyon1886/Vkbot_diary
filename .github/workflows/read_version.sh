@@ -1,2 +1,2 @@
-BOT_VERSION='0.3.3'
+BOT_VERSION='0.3.4'
 echo ::set-output name=SOURCE_TAG::$BOT_VERSION

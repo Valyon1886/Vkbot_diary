@@ -162,7 +162,9 @@ class VkBotFunctions:
                 if week_day_number != 6:
                     week_day = self._week_days[week_day_number % 7]
                     full_sentence = self._make_schedule(group, week_day, start_date + timedelta(days=week_day_number),
-                                                        lessons_start_end)
+                                                        lessons_start_end,
+                                                        next_week=datetime.now().isoweekday() - 1 == 6 and
+                                                                  user_message == "на завтра")
                 else:
                     week_day = "Воскресенье"
                     full_sentence = ""

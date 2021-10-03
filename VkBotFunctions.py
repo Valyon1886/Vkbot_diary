@@ -371,14 +371,22 @@ class VkBotFunctions:
                                     count=1,
                                     offset=randint(0, photos_count) - 1).get('items')[0].get('sizes')
         max_photo_height = 0
-        photo_url = ""
+        max_photo_width = 0
+        photo_url = None
         for i in photo_sizes:
-            if i.get('height') > max_photo_height:
-                max_photo_height = i.get('height')
+            if i['height'] > max_photo_height:
+                max_photo_height = i['height']
+            if i['width'] > max_photo_width:
+                max_photo_width = i['width']
         for i in photo_sizes:
-            if i.get('height') == max_photo_height:
-                photo_url = i.get('url')
+            if i['height'] == max_photo_height and i['width'] == max_photo_width:
+                photo_url = i['url']
                 break
+        if photo_url is None:
+            for i in photo_sizes:
+                if i['height'] == max_photo_height:
+                    photo_url = i['url']
+                    break
 
         return photo_url, choice(self._300_answers)
 

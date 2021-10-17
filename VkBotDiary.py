@@ -7,7 +7,7 @@ from traceback import print_exc
 
 from colorama import Fore, Style
 from vk_api import VkApi
-from vk_api.exceptions import BadPassword, ApiError
+from vk_api.exceptions import BadPassword, ApiError, Captcha
 from vk_api.longpoll import VkLongPoll, VkEventType
 
 from InitConfig import Config
@@ -34,6 +34,7 @@ def ensure_tables_created() -> None:
 
 def checking_schedule_on_changes() -> None:
     """Проверка расписания на изменения с заданным периодом ожидания"""
+    sleep(0.1)
     while True:
         all_files_downloaded = True
         if Config.get_weeks_info()["start_week"] <= datetime.now() <= Config.get_weeks_info()["pre_exam_week"]:
@@ -57,31 +58,44 @@ def main() -> None:
     except ApiError:
         exit("Ошибка! Неправильно введён токен для бота! Измените токен бота на правильный!")
         return
-    ensure_tables_created()
-    print(Fore.BLUE + "Соединение с базой данных установлено!" + Style.RESET_ALL)
-    if Config.get_init_database():
-        InitDatabase.ensure_start_data_added()
-    if "checking_schedule_on_changes" not in [i.name for i in threads()]:
-        thread_1 = Thread(target=checking_schedule_on_changes, name="checking_schedule_on_changes")
-        thread_1.daemon = True
-        print(Fore.CYAN + "Бот запустил поток проверки расписания!" + Style.RESET_ALL)
-        thread_1.start()
     vk_session_user = None
     if Config.get_user_info():
         chdir(Config.get_dir_name())
         login, password = Config.get_user_info()
-        try:
-            vk_session_user = VkApi(login, password)
-            vk_session_user.auth()
-        except BadPassword:
-            vk_session_user = None
-            print(Fore.RED + "Ошибка! Логин и/или пароль пользователя для бота введены не правильно! "
-                             "Функции подкоманд 'Мем' не будут работать!" + Style.RESET_ALL)
+        captcha = None
+        while True:
+            try:
+                if captcha is not None:
+                    raise captcha
+                vk_session_user = VkApi(login, password)
+                vk_session_user.auth()
+                break
+            except Captcha as ex:
+                try:
+                    print(Fore.RED + f"Нужна капча! Пройдите по этой ссылке {ex.get_url()} и решите её!" +
+                          Style.RESET_ALL)
+                    captcha_solve = input("Введите капчу: ")
+                    ex.try_again(captcha_solve)
+                except Captcha as ex_c:
+                    captcha = ex_c
+            except BadPassword:
+                vk_session_user = None
+                print(Fore.RED + "Ошибка! Логин и/или пароль пользователя для бота введены не правильно! "
+                                 "Функции подкоманд 'Мем' не будут работать!" + Style.RESET_ALL)
+                break
         chdir("..")
         print(Fore.BLUE + "Пользователь для бота авторизировался!" + Style.RESET_ALL)
     else:
         print(Fore.YELLOW + "Логин и/или пароль пользователя для бота не введены. Функции подкоманд 'Мем' не доступны!"
               + Style.RESET_ALL)
+    ensure_tables_created()
+    print(Fore.BLUE + "Соединение с базой данных установлено!" + Style.RESET_ALL)
+    if Config.get_init_database():
+        InitDatabase.ensure_start_data_added()
+    if "checking_schedule_on_changes" not in [i.name for i in threads()]:
+        thread_1 = Thread(target=checking_schedule_on_changes, name="checking_schedule_on_changes", daemon=True)
+        print(Fore.CYAN + "Бот запустил поток проверки расписания!" + Style.RESET_ALL)
+        thread_1.start()
 
     print(Fore.LIGHTMAGENTA_EX + "Бот начал слушать сообщения!" + Style.RESET_ALL)
     for event in longpoll.listen():

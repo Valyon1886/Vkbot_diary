@@ -4,6 +4,7 @@ from os import makedirs, environ
 from os.path import isfile, exists
 from pathlib import Path
 from sys import exit
+from typing import Optional, Tuple, Any
 
 from colorama import Fore, Style, init as c_init
 from dateparser import parse as date_parse
@@ -188,7 +189,7 @@ class Config:
                 Config._config_dict["user_password"] = None
 
     @staticmethod
-    def get_user_info() -> tuple or None:
+    def get_user_info() -> Optional[Tuple[Optional[Any], Optional[Any]]]:
         """Возвращает логин и пароль пользователя для бота
 
         Return

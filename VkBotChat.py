@@ -2,6 +2,7 @@ from datetime import datetime
 from io import BytesIO
 from random import randint, choice
 from re import search, findall, split as re_split
+from typing import Union
 
 from dateparser import parse as date_parse
 from peewee import DoesNotExist
@@ -38,7 +39,7 @@ class VkBotChat:
         self._flag = True
         self._404_url = "http://cdn.bolshoyvopros.ru/files/users/images/bd/02/bd027e654c2fbb9f100e372dc2156d4d.jpg"
 
-    def get_response(self, user_message) -> None:
+    def get_response(self, user_message: Union[str, None]) -> None:
         """Анализирует запрос пользователя и отвечает на него.
 
         Parameters

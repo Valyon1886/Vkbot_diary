@@ -8,6 +8,7 @@ from colorama import Fore, Style
 from peewee import fn, DoesNotExist
 from requests import get
 from xlrd import open_workbook
+from xlrd.sheet import Sheet
 
 from InitConfig import Config
 from InitSQL import InitSQL
@@ -183,19 +184,18 @@ class Parser:
                             lesson_end_time = time(*map(int, lesson_end_time.split('-')))
                             Parser._fill_lesson_start_end_table(lesson_number, lesson_start_time, lesson_end_time)
 
-                        subject = str(sheet.cell(3 + evenness + lesson * 2 + day * 12, col_index).value).strip()
-                        lesson_type = str(sheet.cell(3 + evenness + lesson * 2 + day * 12, col_index + 1).value) \
-                            .strip()
-                        lecturer = str(sheet.cell(3 + evenness + lesson * 2 + day * 12, col_index + 2).value) \
-                            .replace(",", ".").strip()
-                        classroom = str(sheet.cell(3 + evenness + lesson * 2 + day * 12, col_index + 3).value) \
-                            .strip()
-                        url = str(sheet.cell(3 + evenness + lesson * 2 + day * 12, col_index + 4).value).strip()
+                        subject = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12,
+                                                        col_index, sheet).replace("\n", " ")
+                        lesson_type = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12, col_index + 1, sheet)
+                        lecturer = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12,
+                                                         col_index + 2, sheet).replace(",", ".")
+                        classroom = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12, col_index + 3, sheet)
+                        url = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12, col_index + 4, sheet)
 
-                        day_of_week_id = (group_count + 1) if lesson == 0 and day == 0 else (
-                                group_count - int(not bool(evenness)))
-                        schedule_of_subject_id = (day_count + 1) if lesson == 0 else (
-                                day_count - int(not bool(evenness)))
+                        day_of_week_id = (group_count + 1) \
+                            if lesson == 0 and day == 0 else (group_count - int(not bool(evenness)))
+                        schedule_of_subject_id = (day_count + 1) \
+                            if lesson == 0 else (day_count - int(not bool(evenness)))
 
                         try:
                             day_id = Weeks.get(
@@ -285,3 +285,24 @@ class Parser:
             lesson_times.save()
         if lesson_number == 6:
             Parser._lesson_start_end_table_filled = True
+
+    @staticmethod
+    def _get_cell_info(row_index, col_index, sheet) -> str:
+        """Получение информации из ячейки и проверка не является ли ячейка совмещённой
+        Parameters
+        ----------
+        row_index: int
+            номер ряда
+        col_index: int
+            номер колонки
+        sheet: Sheet
+            лист для поиска
+        """
+        cell = str(sheet.cell(row_index, col_index).value).strip(".…,")
+        if cell == "":
+            for crange in sheet.merged_cells:
+                rlo, rhi, clo, chi = crange
+                if rlo <= row_index < rhi and clo <= col_index < chi:
+                    return str(sheet.cell(rlo, clo).value).strip(".…,")
+            return ""
+        return cell

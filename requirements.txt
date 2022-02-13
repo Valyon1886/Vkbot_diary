@@ -1,11 +1,11 @@
-beautifulsoup4==4.9.3
+beautifulsoup4==4.10.0
 vk-api
 xlrd==1.2.0
 PyMySQL==1.0.2
-cryptography==3.4.7
+cryptography==3.4.8
 peewee==3.14.4
 SpeechRecognition==3.8.1
-colorama~=0.4.4
-requests~=2.25.1
-dateparser~=1.0.0
-python-dateutil~=2.8.1
+colorama==0.4.4
+requests==2.27.1
+dateparser==1.1.0
+python-dateutil==2.8.2

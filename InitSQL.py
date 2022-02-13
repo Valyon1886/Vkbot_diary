@@ -4,8 +4,12 @@ from sys import exit
 
 from colorama import Fore, Style
 from peewee import *
-
+from playhouse.shortcuts import ReconnectMixin
 from InitConfig import Config
+
+
+class ReconnectMySQLDatabase(ReconnectMixin, MySQLDatabase):
+    pass
 
 
 class InitSQL:
@@ -20,7 +24,7 @@ class InitSQL:
         return InitSQL._myDB
 
     @staticmethod
-    def _init_DB() -> MySQLDatabase:
+    def _init_DB() -> ReconnectMySQLDatabase:
         """Инициализация соединения с базой данных и сохранение экземпляра"""
         Config.read_config()
         database_config = Config.get_database_info()
@@ -29,11 +33,11 @@ class InitSQL:
         while True:
             tries += 1
             try:
-                myDB = MySQLDatabase(host=database_config.get("host"),
-                                     port=3306,
-                                     user=database_config.get("user"),
-                                     passwd=database_config.get("password"),
-                                     database=database_config.get("database"))
+                myDB = ReconnectMySQLDatabase(host=database_config.get("host"),
+                                              port=3306,
+                                              user=database_config.get("user"),
+                                              passwd=database_config.get("password"),
+                                              database=database_config.get("database"))
                 myDB.connect()
                 break
             except OperationalError as Argument:

@@ -51,7 +51,7 @@ class VkBotChat:
             self._flag = True
             self.send_message("Ошибка 504: Бот задумался о природе гравитационного коллапса"
                               " сверхмассивных объектов...\n"
-                              "Подождите 2 секунды и отправьте любой текст, чтобы пробудить его :)")
+                              "Подождите 5 секунд и отправьте любой текст, чтобы пробудить его :)")
 
         if VkBotStatus.get_state(self._user_id) == States.ADD_COMMUNITY or \
                 VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY:

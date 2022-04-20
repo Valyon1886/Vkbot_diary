@@ -132,6 +132,9 @@ class VkBotChat:
                     else:
                         self.send_message("Я бы мог рассказать что-то, но мне лень. ( ͡° ͜ʖ ͡°)")
 
+            elif user_message == 'стикер':
+                self.send_message("", sticker_id=163)
+
             elif user_message == 'добавить сообщество':
                 if self._vk_session_user is None:
                     self.send_message("Ошибка vk: Не введён логин и пароль пользователя", image_url=self._404_url)
@@ -188,7 +191,7 @@ class VkBotChat:
             keyboard = self._functions.create_menu("Продолжить")
             self.send_message(message='Что хочешь посмотреть?', keyboard=keyboard)
 
-    def send_message(self, message, keyboard=None, image_url=None) -> None:
+    def send_message(self, message, keyboard=None, image_url=None, sticker_id=None) -> None:
         """Отсылает сообщение опционально с клавиатурой и/или изображением
 
         Parameters
@@ -199,6 +202,8 @@ class VkBotChat:
             клавиатура доступная пользователю
         image_url: str
             ссылка на изображение
+        sticker_id: int
+            id стикера
         """
         payload = {
             'user_id': self._user_id,
@@ -213,6 +218,8 @@ class VkBotChat:
             upload = VkUpload(self._vk_session)
             photo = upload.photo_messages(arr)
             payload['attachment'] = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
+        if sticker_id:
+            payload['sticker_id'] = sticker_id
         self._vk_session.method('messages.send', payload)
 
     def _create_cancel_menu(self, message="", add_to_existing=False, buttons=0, list_of_named_buttons=None) -> None:

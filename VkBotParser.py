@@ -303,6 +303,6 @@ class Parser:
             for crange in sheet.merged_cells:
                 rlo, rhi, clo, chi = crange
                 if rlo <= row_index < rhi and clo <= col_index < chi:
-                    return str(sheet.cell(rlo, clo).value).strip(".…,")
+                    return str(sheet.cell(rlo, clo).value).strip(".…, \n")
             return ""
         return cell

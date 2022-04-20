@@ -1,9 +1,11 @@
 from datetime import datetime
+from json import loads
 from os import chdir
 from sys import exit
 from threading import Thread, enumerate as threads
 from time import sleep
 from traceback import print_exc
+from typing import List
 
 from colorama import Fore, Style
 from vk_api import VkApi
@@ -45,6 +47,38 @@ def checking_schedule_on_changes() -> None:
             print(Fore.MAGENTA + "Парсинг файлов расписания не произведён, т. к. семестр ещё не начался/уже закончился!"
                   + Style.RESET_ALL)
         sleep(Config.get_await_time() if all_files_downloaded else 60)
+
+
+def parse_unanswered_messages(vk_session) -> List[dict]:
+    vk = vk_session.get_api()
+    conversations = vk.messages.getConversations(count=200, filter="unanswered")
+    conversations_items = conversations['items']
+    conv_count = conversations['count'] - 200
+    offset = 200
+    while conv_count > 200:
+        conversations_items.extend(vk.messages.getConversations(count=200, filter="unanswered", offset=offset))
+        offset += 200
+    return [i['last_message'] for i in conversations_items if i.get("last_message", None) is not None]
+
+
+def parse_message(vk_session, vk_session_user, text: str, attachments: List[dict], user_id: int) -> None:
+    user_message = text
+    for a in attachments:
+        if a["type"] == "audio_message":
+            try:
+                user_message = SpeechRecognizer.get_phrase(a["audio_message"]["link_mp3"]).lower()
+            except ValueError:
+                user_message = "ошибка при обработке звукового сообщения"
+            break
+        elif a["type"] == "sticker":
+            user_message = "стикер"
+    bot = VkBotChat(vk_session, user_id, vk_session_user)
+    try:
+        bot.get_response(user_message)
+    except BaseException:
+        bot.get_response(None)
+        print_exc()
+        exit()
 
 
 def main() -> None:
@@ -98,23 +132,14 @@ def main() -> None:
         thread_1.start()
 
     print(Fore.LIGHTMAGENTA_EX + "Бот начал слушать сообщения!" + Style.RESET_ALL)
+    for message in parse_unanswered_messages(vk_session):
+        parse_message(vk_session, vk_session_user,
+                      text=message["text"], attachments=message.get("attachments", []), user_id=message["from_id"])
     for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and (
-                event.text or "attach1_kind" in event.attachments) and event.to_me:
-            user_message = event.text
-            if "attach1_kind" in event.attachments and event.attachments["attach1_kind"] == 'audiomsg':
-                attachs = eval(event.attachments["attachments"])
-                try:
-                    user_message = SpeechRecognizer.get_phrase(attachs[0]['audio_message']['link_mp3']).lower()
-                except ValueError:
-                    user_message = "ошибка при обработке звукового сообщения"
-            bot = VkBotChat(vk_session, event.user_id, vk_session_user)
-            try:
-                bot.get_response(user_message)
-            except BaseException:
-                bot.get_response(None)
-                print_exc()
-                exit()
+        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+            parse_message(vk_session, vk_session_user,
+                          text=event.text, attachments=loads(event.attachments.get("attachments", "[]")),
+                          user_id=event.user_id)
 
 
 if __name__ == '__main__':

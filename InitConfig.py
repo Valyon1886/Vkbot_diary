@@ -89,7 +89,8 @@ class Config:
                 Config._config_dict.get("user_password", None) is None:
             changes_made = True
             Config._set_user_info(user_login=env_vars.get("BOT_USER_LOGIN", None),
-                                  user_password=env_vars.get("BOT_USER_PASSWORD", None))
+                                  user_password=env_vars.get("BOT_USER_PASSWORD", None),
+                                  first=first)
 
         if Config._config_dict.get("weeks_times", None) is None:
             changes_made = True
@@ -162,7 +163,7 @@ class Config:
         return Config._config_dict["token"]
 
     @staticmethod
-    def _set_user_info(user_login=None, user_password=None) -> None:
+    def _set_user_info(user_login=None, user_password=None, first=False) -> None:
         """Устанавливает логин и пароль пользователя для бота
 
         Parameters
@@ -171,6 +172,8 @@ class Config:
             логин пользователя для бота
         user_password: str or None
             пароль пользователя для бота
+        first: bool
+            первый ли раз вызывается :meth:`.InitConfig.Config._set_up_config`
         """
         if Config._runned_from_docker:
             if any([i is None for i in [user_login, user_password]]):
@@ -180,8 +183,8 @@ class Config:
                 Config._config_dict["user_login"] = user_login
                 Config._config_dict["user_password"] = user_password
         else:
-            if 'y' == input("Вы хотите использовать команду 'случайный мем'?"
-                            " (нужен логин и пароль пользователя) Y/n\n").lower():
+            if first and 'y' == input("Вы хотите использовать команду 'случайный мем'?"
+                                      " (нужен логин и пароль пользователя) Y/n\n").lower():
                 Config._config_dict["user_login"] = input("Введите логин пользователя: ")
                 Config._config_dict["user_password"] = input("Введите пароль пользователя: ")
             else:

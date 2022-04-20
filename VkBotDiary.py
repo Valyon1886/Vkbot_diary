@@ -1,3 +1,4 @@
+from contextlib import suppress
 from datetime import datetime
 from json import loads
 from os import chdir
@@ -160,8 +161,9 @@ def main() -> None:
 
     print(Fore.LIGHTMAGENTA_EX + "Бот начал слушать сообщения!" + Style.RESET_ALL)
     for message in parse_unanswered_messages(vk_session):
-        parse_message(vk_session, vk_session_user,
-                      text=message["text"], attachments=message.get("attachments", []), user_id=message["from_id"])
+        with suppress(ApiError):
+            parse_message(vk_session, vk_session_user,
+                          text=message["text"], attachments=message.get("attachments", []), user_id=message["from_id"])
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             parse_message(vk_session, vk_session_user,

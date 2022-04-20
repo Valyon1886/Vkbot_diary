@@ -49,7 +49,19 @@ def checking_schedule_on_changes() -> None:
         sleep(Config.get_await_time() if all_files_downloaded else 60)
 
 
-def parse_unanswered_messages(vk_session) -> List[dict]:
+def parse_unanswered_messages(vk_session: VkApi) -> List[dict]:
+    """Парсит все неотвеченные сообщения
+
+    Parameters
+    ----------
+    vk_session: VkApi
+        сессия бота
+
+    Return
+    ----------
+    last_messages_list: List[dict]
+        список неотвеченных сообщений
+    """
     vk = vk_session.get_api()
     conversations = vk.messages.getConversations(count=200, filter="unanswered")
     conversations_items = conversations['items']
@@ -61,7 +73,22 @@ def parse_unanswered_messages(vk_session) -> List[dict]:
     return [i['last_message'] for i in conversations_items if i.get("last_message", None) is not None]
 
 
-def parse_message(vk_session, vk_session_user, text: str, attachments: List[dict], user_id: int) -> None:
+def parse_message(vk_session: VkApi, vk_session_user: VkApi, text: str, attachments: List[dict], user_id: int) -> None:
+    """Парсит сообщение
+
+    Parameters
+    ----------
+    vk_session: VkApi
+        сессия бота
+    vk_session_user: VkApi
+        сессия пользователя
+    text: str
+        текст сообщения
+    attachments: List[dict]
+        вложения сообщения
+    user_id: int
+        id пользователя
+    """
     user_message = text
     for a in attachments:
         if a["type"] == "audio_message":

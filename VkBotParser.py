@@ -1,7 +1,9 @@
+import sys
 from contextlib import suppress
 from datetime import time
 from hashlib import md5
 from re import search, findall
+from traceback import print_exception
 
 from bs4 import BeautifulSoup
 from colorama import Fore, Style
@@ -49,22 +51,29 @@ class Parser:
         number_of_tries = 3
         if Parser._schedule_info is None:
             Parser._schedule_info = Config.get_schedule_info()
-        # Parsing html page for links
-        page = get("https://www.mirea.ru/schedule/")
-        soup = BeautifulSoup(page.text, "html.parser")
-        uni_names = soup.find("div", {"class": "rasspisanie"}).find_all("a", {"class": "uk-text-bold"})
-        uni_names = list(set([i.contents[0] for i in uni_names]))
-        with suppress(ValueError):
-            uni_names.remove("Институт вечернего и заочного образования")
-        for name in uni_names:
-            links = soup.find("div", {"class": "rasspisanie"}). \
-                find(string=name). \
-                find_parent("div"). \
-                find_parent("div"). \
-                findAll("a", {"class": "uk-link-toggle"})
-            links = [link["href"] for link in links]
-            if len(links) > 0:
-                result_links.extend(links)
+        try:
+            # Parsing html page for links
+            page = get("https://www.mirea.ru/schedule/")
+            soup = BeautifulSoup(page.text, "html.parser")
+            uni_names = soup.find("div", {"class": "schedule"}).find_all("a", {"class": "uk-text-bold"})
+            uni_names = list(set([i.contents[0] for i in uni_names]))
+            with suppress(ValueError):
+                uni_names.remove("Институт вечернего и заочного образования")
+            for name in uni_names:
+                links = soup.find("div", {"class": "schedule"}). \
+                    find(string=name). \
+                    find_parent("div"). \
+                    find_parent("div"). \
+                    findAll("a", {"class": "uk-link-toggle"})
+                links = [link["href"] for link in links]
+                if len(links) > 0:
+                    result_links.extend(links)
+        except BaseException as ex:
+            print(Fore.LIGHTRED_EX +
+                  "Ошибка: Что-то пошло не так с нахождением институтов. Опять серваки МИРЭА падают?)"
+                  + Style.RESET_ALL)
+            print_exception(type(ex), ex, ex.__traceback__, file=sys.stderr)
+            return False
 
         tables_length = [
             len([i for i in Weeks.select().limit(1).execute()]),

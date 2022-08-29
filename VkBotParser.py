@@ -92,7 +92,7 @@ class Parser:
         for x in result_links:
             if not any(i in x.lower() for i in ["зач", "экз", "сессия"]) and ".xls" in x.lower() and \
                     any([k_string.format(i) in x.lower() for i in range(1, 6) for k_string in
-                         ["{}к", "{} курс", "{}_курс"]]):
+                         ["{}-kurs", "{}к", "{} курс", "{}_курс"]]):
                 for _try in range(number_of_tries):
                     req = get(x)
                     if req.status_code == 200:
@@ -313,5 +313,4 @@ class Parser:
                 rlo, rhi, clo, chi = crange
                 if rlo <= row_index < rhi and clo <= col_index < chi:
                     return str(sheet.cell(rlo, clo).value).strip(".…, \n")
-            return ""
         return cell

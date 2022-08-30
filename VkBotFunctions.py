@@ -220,6 +220,9 @@ class VkBotFunctions:
         even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
         dates_of_tasks = self.get_user_tasks_on_day(day_date)
 
+        if len(list(Weeks.select().where(Weeks.group == group).limit(1).execute())) == 0:
+            return f"Для этой группы \"{group}\" нет расписания!"
+
         try:
             day_of_group_id = Weeks.get((Weeks.group == group) & (Weeks.even == even_week)).days_of_group_id
 

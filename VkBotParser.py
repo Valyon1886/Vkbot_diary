@@ -60,11 +60,15 @@ class Parser:
             with suppress(ValueError):
                 uni_names.remove("Институт вечернего и заочного образования")
             for name in uni_names:
-                links = soup.find("div", {"class": "schedule"}). \
-                    find(string=name). \
-                    find_parent("div"). \
-                    find_parent("div"). \
-                    findAll("a", {"class": "uk-link-toggle"})
+                links = []
+                nav_links = soup.find("div", {"class": "schedule"}).findAll(string=name)
+                for link in nav_links:
+                    links.extend(
+                        link.
+                        find_parent("div").
+                        find_parent("div").
+                        findAll("a", {"class": "uk-link-toggle"})
+                    )
                 links = [link["href"] for link in links]
                 if len(links) > 0:
                     result_links.extend(links)
@@ -90,9 +94,8 @@ class Parser:
             InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Lesson_start_end])
 
         for x in result_links:
-            if not any(i in x.lower() for i in ["зач", "экз", "сессия"]) and ".xls" in x.lower() and \
-                    any([k_string.format(i) in x.lower() for i in range(1, 6) for k_string in
-                         ["{}-kurs", "{}к", "{} курс", "{}_курс"]]):
+            if not search(r"(зач|экз|сессия)", x.lower()) and ".xls" in x.lower() and \
+                    search(r"\d(-kurs?|к|\sкурс|_курс)", x.lower()):
                 for _try in range(number_of_tries):
                     req = get(x)
                     if req.status_code == 200:

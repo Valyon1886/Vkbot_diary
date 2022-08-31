@@ -144,7 +144,25 @@ class Parser:
             содержимое в виде набора байт скачанной таблицы
         """
         book = open_workbook(file_contents=table_contents)
-        sheet = book.sheet_by_index(0)
+        sheet_index = 1
+        for sheet in book.sheets():
+            print(Fore.LIGHTYELLOW_EX + f"Парсим {sheet_index} лист" + Style.RESET_ALL)
+            try:
+                Parser._parse_table_sheet_to_DB(sheet)
+            except BaseException as ex:
+                print(Fore.RED + f"Ошибка при парсинге листа {sheet_index}:" + Style.RESET_ALL)
+                print_exception(type(ex), ex, ex.__traceback__, file=sys.stderr)
+            sheet_index += 1
+
+    @staticmethod
+    def _parse_table_sheet_to_DB(sheet: Sheet) -> None:
+        """Обработка листа из таблицы в базу данных
+
+        Parameters
+        ----------
+        sheet: Sheet
+            лист из таблицы
+        """
         num_cols = sheet.ncols
         # Check if several columns in the beginning are duplicating
         start_offset = 0

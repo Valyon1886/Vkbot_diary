@@ -5,6 +5,7 @@ from os.path import isfile, exists
 from pathlib import Path
 from sys import exit
 from typing import Optional, Tuple, Any
+from ast import literal_eval
 
 from colorama import Fore, Style, init as c_init
 from dateparser import parse as date_parse
@@ -65,7 +66,8 @@ class Config:
         """
         env_vars = {}
         for var in ["BOT_TOKEN", "BOT_USER_LOGIN", "BOT_USER_PASSWORD", "START_WEEK", "PRE_EXAM_WEEK",
-                    "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE", "MYSQL_HOST", "BOT_AWAIT_TIME"]:
+                    "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE", "MYSQL_HOST", "BOT_AWAIT_TIME",
+                    "BOT_DROP_SCHEDULE_TABLES"]:
             try:
                 var_value = environ[var]
                 env_vars[var] = var_value
@@ -128,6 +130,10 @@ class Config:
         if Config._config_dict.get("await_time", None) is None:
             changes_made = True
             Config._set_await_time(bot_await_time=env_vars.get("BOT_AWAIT_TIME", None))
+
+        if Config._config_dict.get("drop_tables", None) is None:
+            changes_made = True
+            Config._set_drop_schedule_tables(drop_tables=env_vars.get("BOT_DROP_SCHEDULE_TABLES", None))
 
         if changes_made:
             Config.save_config()
@@ -378,3 +384,39 @@ class Config:
             время ожидания перед проверкой расписания в секундах
         """
         return Config._config_dict["await_time"]
+
+    @staticmethod
+    def _set_drop_schedule_tables(drop_tables=None) -> None:
+        """Сохраняет значение очистки таблиц перед запуском парсинга расписания
+
+        Parameters
+        ----------
+        drop_tables: str or None
+            значение очистки таблиц
+        """
+        if Config._runned_from_docker:
+            if drop_tables is None:
+                Config._config_dict["drop_tables"] = False
+                print("Не было указана очистка таблиц! Было выставлено значение 'нет'!")
+            else:
+                try:
+                    Config._config_dict["drop_tables"] = bool(literal_eval(drop_tables))
+                except ValueError:
+                    Config._config_dict["drop_tables"] = False
+                    print("Значение очистки таблиц указано не верно (невозможно привести к bool)! "
+                          "Было выставлено значение 'нет'!")
+        else:
+            Config._config_dict["drop_tables"] = bool(literal_eval(
+                input("Введите хотите вы очищать таблицы с расписанием (True, False): ").capitalize()
+            ))
+
+    @staticmethod
+    def get_drop_schedule_tables() -> bool:
+        """Возвращает значение очистки таблиц перед запуском парсинга расписания
+
+        Return
+        ----------
+        drop_tables: bool
+            значение очистки таблиц
+        """
+        return Config._config_dict["drop_tables"]

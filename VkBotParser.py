@@ -85,10 +85,15 @@ class Parser:
             len([i for i in Subjects.select().limit(1).execute()])
         ]
 
-        if any([i == 0 for i in tables_length]) and not all([i == 0 for i in tables_length]):
-            print(Fore.LIGHTRED_EX +
-                  "Одна из таблиц 'Weeks', 'Days' или 'Subjects' оказалась пуста! Заполняем все снова!" +
-                  Style.RESET_ALL)
+        if any([i == 0 for i in tables_length]) and not all([i == 0 for i in tables_length]) or \
+                Config.get_drop_schedule_tables():
+            if Config.get_drop_schedule_tables():
+                print(Fore.LIGHTRED_EX +
+                      "Очищаем таблицы 'Weeks', 'Days', 'Subjects' по требованию пользователя!" + Style.RESET_ALL)
+            else:
+                print(Fore.LIGHTRED_EX +
+                      "Одна из таблиц 'Weeks', 'Days' или 'Subjects' оказалась пуста! Заполняем все снова!" +
+                      Style.RESET_ALL)
             parse_all_files_anyway = True
             InitSQL.get_DB().drop_tables([Weeks, Days, Subjects, Lesson_start_end])
             InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Lesson_start_end])

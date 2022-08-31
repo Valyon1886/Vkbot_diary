@@ -104,6 +104,7 @@ pip install -r requirements.txt
   * `MYSQL_PASSWORD`: пароль пользователя базы данных mySQL, **менять если вы хотите используете другой пароль пользователя или другого пользователя для базы данных**
   * `MYSQL_DATABASE`: имя базы данных в mySQL, где будут храниться таблицы для бота, **можно указать какое хотите название**
   * `BOT_AWAIT_TIME`: время в секундах на ожидание перед очередным обновлением файлов расписания, **указать какое хотите значение**
+  * `BOT_DROP_SCHEDULE_TABLES`: булевое значение (`True`, `False`) очистки таблиц перед запуском парсинга расписания, **указывать да, только если надо очистить таблицы!**
 * Для запуска контейнера — команду `docker-compose -p "my_app" up` (`my_app` - имя контейнера)
 
 **Примечание:** Если в строке, которую выводите в значения переменных окружения, есть знак доллара, то его надо экранировать долларом. Пример: было так - `"fung$gbiobm"`, а надо так - `"fung$$gbiobm"`.
@@ -152,6 +153,7 @@ services:
       MYSQL_PASSWORD: "root_password"
       MYSQL_DATABASE: "Your_Database"
       BOT_AWAIT_TIME: 3600
+      BOT_DROP_SCHEDULE_TABLES: "False"
     volumes:
       - "./bot_local_files:/VkBotDiary/local_files:rw" # links bot config files in ./bot_local_file
 ```

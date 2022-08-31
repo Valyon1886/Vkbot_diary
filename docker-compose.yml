@@ -35,5 +35,6 @@ services:
       MYSQL_PASSWORD: "root_password"
       MYSQL_DATABASE: "Your_Database"
       BOT_AWAIT_TIME: 3600
+      BOT_DROP_SCHEDULE_TABLES: "False"
     volumes:
       - "./bot_local_files:/VkBotDiary/local_files:rw" # links bot config files in ./bot_local_file

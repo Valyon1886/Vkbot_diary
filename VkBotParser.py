@@ -2,7 +2,7 @@ import sys
 from contextlib import suppress
 from datetime import time
 from hashlib import md5
-from re import search, findall
+from re import search, findall, sub
 from traceback import print_exception
 
 from bs4 import BeautifulSoup
@@ -20,7 +20,7 @@ from MySQLStorage import Weeks, Days, Subjects, Lesson_start_end
 class Parser:
     """Класс Parser используется для получения расписания с сайта МИРЭА."""
     _week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
-    _lesson_start_end_table_filled = False
+    _lesson_times_parsed_for_table = False
     _schedule_info = None
     _bot_parsing = False
 
@@ -135,7 +135,7 @@ class Parser:
                                if (number_of_tries - _try - 1) != 0 else '') + Style.RESET_ALL)
         if not any(files_parsed):
             print(Fore.LIGHTRED_EX + "Ни одного файла не удалось скачать! Сраные серваки МИРЭА..." + Style.RESET_ALL)
-        Parser._lesson_start_end_table_filled = False
+        Parser._lesson_times_parsed_for_table = False
         Parser._bot_parsing = False
         return all(files_parsed)
 
@@ -158,6 +158,7 @@ class Parser:
                 print(Fore.RED + f"Ошибка при парсинге листа {sheet_index}:" + Style.RESET_ALL)
                 print_exception(type(ex), ex, ex.__traceback__, file=sys.stderr)
             sheet_index += 1
+            Parser._lesson_times_parsed_for_table = False
 
     @staticmethod
     def _parse_table_sheet_to_DB(sheet: Sheet) -> None:
@@ -208,24 +209,40 @@ class Parser:
             else:
                 continue
 
+            try:
+                has_url = str(sheet.cell(2, col_index + 4).value).strip(".…, \n") == "Ссылка"
+            except IndexError:  # Sometimes gives 'array index out of range'...
+                has_url = False
+
+            skip_to_curr_day = 0
+
             for day in range(6):
-                for lesson in range(6):
+                number_of_lessons = Parser._get_number_of_lessons(3 + skip_to_curr_day, 0, sheet)
+                for lesson in range(number_of_lessons):
                     for evenness in range(2):
-                        lesson_number = int(sheet.cell(3 + lesson * 2 + day * 12, start_offset + 1).value)
-                        if not Parser._lesson_start_end_table_filled:
-                            lesson_start_time = str(sheet.cell(3 + lesson * 2 + day * 12, start_offset + 2).value)
-                            lesson_end_time = str(sheet.cell(3 + lesson * 2 + day * 12, start_offset + 3).value)
+                        lesson_number = int(sheet.cell(3 + lesson * 2 + skip_to_curr_day, start_offset + 1).value)
+                        if not Parser._lesson_times_parsed_for_table:
+                            lesson_start_time = Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
+                                                                      start_offset + 2, sheet)
+                            lesson_end_time = Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
+                                                                    start_offset + 3, sheet)
                             lesson_start_time = time(*map(int, lesson_start_time.split('-')))
                             lesson_end_time = time(*map(int, lesson_end_time.split('-')))
                             Parser._fill_lesson_start_end_table(lesson_number, lesson_start_time, lesson_end_time)
 
-                        subject = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12,
-                                                        col_index, sheet).replace("\n", " ")
-                        lesson_type = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12, col_index + 1, sheet)
-                        lecturer = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12,
+                        subject = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
+                                                        col_index, sheet)
+                        lesson_type = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
+                                                            col_index + 1, sheet)
+                        lecturer = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
                                                          col_index + 2, sheet).replace(",", ".")
-                        classroom = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12, col_index + 3, sheet)
-                        url = Parser._get_cell_info(3 + evenness + lesson * 2 + day * 12, col_index + 4, sheet)
+                        classroom = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
+                                                          col_index + 3, sheet)
+                        if has_url:
+                            url = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
+                                                        col_index + 4, sheet)
+                        else:
+                            url = ""
 
                         day_of_week_id = (group_count + 1) \
                             if lesson == 0 and day == 0 else (group_count - int(not bool(evenness)))
@@ -293,6 +310,9 @@ class Parser:
                                          even=bool(evenness),
                                          days_of_group_id=group_count + 1)
                             group_count += 1
+                skip_to_curr_day += number_of_lessons * 2
+
+            Parser._lesson_times_parsed_for_table = True
 
     @staticmethod
     def _fill_lesson_start_end_table(lesson_number: int, start_time: time, end_time: time) -> None:
@@ -318,8 +338,6 @@ class Parser:
             lesson_times.start_time = start_time
             lesson_times.end_time = end_time
             lesson_times.save()
-        if lesson_number == 6:
-            Parser._lesson_start_end_table_filled = True
 
     @staticmethod
     def _get_cell_info(row_index, col_index, sheet) -> str:
@@ -333,10 +351,27 @@ class Parser:
         sheet: Sheet
             лист для поиска
         """
-        cell = str(sheet.cell(row_index, col_index).value).strip(".…,")
+        cell = sub(r"\n+", "\n", str(sheet.cell(row_index, col_index).value).strip(".…, \n"))
         if cell == "":
             for crange in sheet.merged_cells:
                 rlo, rhi, clo, chi = crange
                 if rlo <= row_index < rhi and clo <= col_index < chi:
-                    return str(sheet.cell(rlo, clo).value).strip(".…, \n")
+                    return sub(r"\n+", "\n", str(sheet.cell(rlo, clo).value).strip(".…, \n"))
         return cell
+
+    @staticmethod
+    def _get_number_of_lessons(row_index, col_index, sheet) -> int:
+        """Получение количества пар на день
+        Parameters
+        ----------
+        row_index: int
+            номер ряда
+        col_index: int
+            номер колонки
+        sheet: Sheet
+            лист для поиска
+        """
+        for crange in sheet.merged_cells:
+            rlo, rhi, clo, chi = crange
+            if rlo <= row_index < rhi and clo <= col_index < chi:
+                return (rhi - rlo) // 2

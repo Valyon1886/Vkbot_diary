@@ -159,19 +159,25 @@ class VkBotFunctions:
                     week_day_number = datetime.now().isoweekday() - 1
                 else:
                     week_day_number = datetime.now().isoweekday()
+                day_date = start_date + timedelta(days=week_day_number)
                 if week_day_number != 6:
                     week_day = self._week_days[week_day_number % 7]
-                    full_sentence = self._make_schedule(group, week_day, start_date + timedelta(days=week_day_number),
-                                                        lessons_start_end,
-                                                        next_week=datetime.now().isoweekday() - 1 == 6 and
-                                                                  user_message == "на завтра")
+                    full_sentence = self._make_schedule(
+                        group,
+                        week_day,
+                        day_date,
+                        lessons_start_end,
+                        next_week=datetime.now().isoweekday() - 1 == 6 and user_message == "на завтра"
+                    )
                 else:
                     week_day = "Воскресенье"
                     full_sentence = ""
                 if full_sentence != "":
-                    return f'Расписание на {user_message.split(" ")[-1]}:\n{week_day}:\n{full_sentence}'
+                    return f'Расписание на {user_message.split(" ")[-1]}:\n{week_day} ' \
+                           f'({day_date.strftime("%d.%m.%Y")}):\n{full_sentence}'
                 else:
-                    return f'{user_message.split(" ")[-1].capitalize()} - {week_day.lower()}, выходной.'
+                    return f'{user_message.split(" ")[-1].capitalize()} - {week_day} ' \
+                           f'({day_date.strftime("%d.%m.%Y")}), выходной.'
             elif user_message in ["на эту неделю", "на следующую неделю"]:
                 full_sentence = ""
                 if user_message == "на следующую неделю":
@@ -179,15 +185,18 @@ class VkBotFunctions:
                 for i in range(len(self._week_days)):
                     week_day_number = i
                     week_day = self._week_days[i]
-                    schedule_sentence = self._make_schedule(group,
-                                                            week_day,
-                                                            start_date + timedelta(days=week_day_number),
-                                                            lessons_start_end,
-                                                            next_week=user_message == "на следующую неделю")
+                    day_date = start_date + timedelta(days=week_day_number)
+                    schedule_sentence = self._make_schedule(
+                        group,
+                        week_day,
+                        day_date,
+                        lessons_start_end,
+                        next_week=user_message == "на следующую неделю"
+                    )
                     if schedule_sentence:
-                        full_sentence += f'\n{week_day}:\n' + schedule_sentence + '\n\n'
+                        full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}):\n{schedule_sentence}\n\n'
                     else:
-                        full_sentence += f"\n{week_day} - выходной.\n\n"
+                        full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}) - выходной.\n\n'
                 return f'Расписание {user_message}: {full_sentence}'
         elif user_message == "какая неделя?":
             week_number = self._get_number_week(datetime.now())
@@ -272,39 +281,46 @@ class VkBotFunctions:
                                 is_place_empty_list.append(True)
                     is_place_empty = any(is_place_empty_list) if len(is_place_empty_list) != 0 else True
                 if is_place_empty:
-                    full_list.append([lesson_start_time, lesson_end_time, i.subject,
+                    full_list.append([lesson_start_time, lesson_end_time, i.subject, i.lesson_number,
                                       i.lesson_type, i.teacher, i.class_number, i.link])
         full_list.extend(task_list)
         full_list.sort(key=lambda x: x[0])
 
         for sbj_tsk in range(len(full_list)):
-            full_sentence += space * 2 + f"С {full_list[sbj_tsk][0].strftime('%H:%M')} " \
-                                         f"по {full_list[sbj_tsk][1].strftime('%H:%M')}" \
-                                         f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
+            if sbj_tsk != 0:
+                full_sentence += f"{space * 2}------------------------------\n"
+            full_sentence += space * 2
             if len(full_list[sbj_tsk]) > 3:
-                if full_list[sbj_tsk][3]:
-                    type_subj_l = full_list[sbj_tsk][3].split(new_line)
+                full_sentence += f"{full_list[sbj_tsk][3]} пара: с "
+            else:
+                full_sentence += "С "
+            full_sentence += f"{full_list[sbj_tsk][0].strftime('%H:%M')} " \
+                             f"по {full_list[sbj_tsk][1].strftime('%H:%M')}" \
+                             f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
+            if len(full_list[sbj_tsk]) > 3:
+                if full_list[sbj_tsk][4]:
+                    type_subj_l = full_list[sbj_tsk][4].split(new_line)
                     if all(all(i == type_subj_l[j] for i in type_subj_l) for j in range(len(type_subj_l))):
                         full_sentence += f"\n{space * 4}Вид занятия: {type_subj_l[0]}"
                     else:
                         full_sentence += f"\n{space * 4}Виды занятий: {', '.join(type_subj_l)}"
-                if full_list[sbj_tsk][4]:
-                    if len(full_list[sbj_tsk][4].split(new_line)) == 1:
-                        full_sentence += f"\n{space * 4}Препод: {full_list[sbj_tsk][4]} "
-                    else:
-                        full_sentence += f"\n{space * 4}Преподы: {full_list[sbj_tsk][4].replace(new_line, f'{new_line}{space * 13} ')}"
                 if full_list[sbj_tsk][5]:
-                    audit_subj_l = full_list[sbj_tsk][5].split(new_line)
+                    if len(full_list[sbj_tsk][5].split(new_line)) == 1:
+                        full_sentence += f"\n{space * 4}Препод: {full_list[sbj_tsk][5]} "
+                    else:
+                        full_sentence += f"\n{space * 4}Преподы: {full_list[sbj_tsk][5].replace(new_line, f'{new_line}{space * 13} ')}"
+                if full_list[sbj_tsk][6]:
+                    audit_subj_l = full_list[sbj_tsk][6].split(new_line)
                     if len(audit_subj_l) == 1 or \
                             all(all(i == audit_subj_l[j] for i in audit_subj_l) for j in range(len(audit_subj_l))):
                         full_sentence += f"\n{space * 4}Аудитория: {audit_subj_l[0]}"
                     else:
-                        full_sentence += f"\n{space * 4}Аудитории: {full_list[sbj_tsk][5].replace(new_line, ', ')}"
-                if full_list[sbj_tsk][6]:
-                    if len(full_list[sbj_tsk][6].split(new_line)) == 1:
-                        full_sentence += f"\n{space * 4}Ссылка: {full_list[sbj_tsk][6]}"
+                        full_sentence += f"\n{space * 4}Аудитории: {full_list[sbj_tsk][6].replace(new_line, ', ')}"
+                if full_list[sbj_tsk][7]:
+                    if len(full_list[sbj_tsk][7].split(new_line)) == 1:
+                        full_sentence += f"\n{space * 4}Ссылка: {full_list[sbj_tsk][7]}"
                     else:
-                        full_sentence += f"\n{space * 4}Ссылки: {full_list[sbj_tsk][6].replace(new_line, f'{new_line}{space * 12} ')}."
+                        full_sentence += f"\n{space * 4}Ссылки: {full_list[sbj_tsk][7].replace(new_line, f'{new_line}{space * 12} ')}."
             full_sentence += "\n"
         return full_sentence
 

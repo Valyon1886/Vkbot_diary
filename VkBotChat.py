@@ -12,6 +12,7 @@ from vk_api.exceptions import ApiError
 from vk_api.keyboard import VkKeyboard
 from vk_api.utils import get_random_id
 
+from InitConfig import Config
 from MySQLStorage import Users_groups, Weeks, Users_tasks
 from VkBotFunctions import VkBotFunctions
 from VkBotParser import Parser
@@ -90,8 +91,28 @@ class VkBotChat:
                     group = Users_groups.get(Users_groups.user_id == self._user_id).group \
                         if user_message != 'какая неделя?' else None
                     self.send_message(self._functions.schedule_menu(user_message, group))
-                    if Parser.get_bot_parsing_state() and search(r'(на [а-я]+( [а-я]+)?)', user_message):
-                        self.send_message(message='Бот сейчас обновляет расписание и оно может поменяться.')
+                    if search(r'(на [а-я]+( [а-я]+)?)', user_message):
+                        parsed_date = Parser.get_bot_parsed_date()
+                        parsed_date_string = ("сегодня " if parsed_date.date() == datetime.now().date()
+                                              else "вчера ") + f'в {parsed_date.strftime("%H:%M")}'
+                        if Parser.get_bot_parsing_state():
+                            self.send_message(message='Бот сейчас обновляет расписание '
+                                                      f'({Parser.get_bot_parsed_percent()}%) и оно может поменяться.\n'
+                                                      f'Начало обновления расписания - {parsed_date_string}.')
+                        else:
+                            await_time = Config.get_await_time()
+                            if await_time // 60 == 0:
+                                await_time_string = f"{await_time} сек"
+                            elif await_time // 60 > 0 and await_time // 3600 == 0:
+                                await_time_to_minutes = round(await_time / 60, 1)
+                                await_time_string = str(int(await_time_to_minutes) if await_time_to_minutes.is_integer()
+                                                        else await_time_to_minutes) + " мин"
+                            else:
+                                await_time_to_hours = round(await_time / 3600, 1)
+                                await_time_string = str(int(await_time_to_hours) if await_time_to_hours.is_integer()
+                                                        else await_time_to_hours) + " ч"
+                            self.send_message(message=f'Последняя дата обновления расписания - {parsed_date_string}.\n'
+                                                      f'Бот обновляет расписание раз в {await_time_string}.')
                 except DoesNotExist:
                     self.send_message(message='Вы не ввели группу.\nПример формата ввода: ИКБО-03-19.')
 

@@ -1,6 +1,6 @@
 import sys
 from contextlib import suppress
-from datetime import time
+from datetime import time, datetime
 from hashlib import md5
 from re import search, findall, sub
 from traceback import print_exception
@@ -23,6 +23,8 @@ class Parser:
     _lesson_times_parsed_for_table = False
     _schedule_info = None
     _bot_parsing = False
+    _parsed_date: datetime
+    _parsed_percent: float
 
     @staticmethod
     def get_bot_parsing_state() -> bool:
@@ -36,6 +38,28 @@ class Parser:
         return Parser._bot_parsing
 
     @staticmethod
+    def get_bot_parsed_date() -> datetime:
+        """Возвращает последнюю дату парсинга/начала парсинга
+
+        Return
+        ----------
+        last_parsed_date: datetime
+            дата последнего парсинга
+        """
+        return Parser._parsed_date
+
+    @staticmethod
+    def get_bot_parsed_percent() -> float:
+        """Возвращает процент парсинга
+
+        Return
+        ----------
+        parsed_percent: float
+            процент парсинга
+        """
+        return Parser._parsed_percent
+
+    @staticmethod
     def download_schedules() -> bool:
         """Скачивает актуальное расписание с сайта МИРЭА
 
@@ -45,6 +69,8 @@ class Parser:
             пропарсены все ли файлы
         """
         Parser._bot_parsing = True
+        Parser._parsed_date = datetime.now()
+        Parser._parsed_percent = 0.0
         files_parsed = []
         result_links = []
         parse_all_files_anyway = False
@@ -98,6 +124,9 @@ class Parser:
             InitSQL.get_DB().drop_tables([Weeks, Days, Subjects, Lesson_start_end])
             InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Lesson_start_end])
 
+        parsed_tables = 0
+        tables_count = len(result_links)
+
         for x in result_links:
             if not search(r"(зач|экз|сессия)", x.lower()) and ".xls" in x.lower() and \
                     search(r"\d(-kurs?|к|\sкурс|_курс)", x.lower()):
@@ -133,10 +162,13 @@ class Parser:
                         print(Fore.RED + f"Ошибка {req.status_code} при скачивании файла {x.split('/')[-1]}!" +
                               (f' Осталось попыток - {str(number_of_tries - _try - 1)}'
                                if (number_of_tries - _try - 1) != 0 else '') + Style.RESET_ALL)
+                parsed_tables += 1
+                Parser._parsed_percent = round((parsed_tables / tables_count) * 100, 1)
         if not any(files_parsed):
             print(Fore.LIGHTRED_EX + "Ни одного файла не удалось скачать! Сраные серваки МИРЭА..." + Style.RESET_ALL)
         Parser._lesson_times_parsed_for_table = False
         Parser._bot_parsing = False
+        Parser._parsed_date = datetime.now()
         return all(files_parsed)
 
     @staticmethod

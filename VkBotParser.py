@@ -351,12 +351,12 @@ class Parser:
         sheet: Sheet
             лист для поиска
         """
-        cell = sub(r"\n+", "\n", str(sheet.cell(row_index, col_index).value).strip(".…, \n"))
+        cell = sub(r"[\t ]*\n+[\t ]*", "\n", str(sheet.cell(row_index, col_index).value).strip(".…, \n"))
         if cell == "":
             for crange in sheet.merged_cells:
                 rlo, rhi, clo, chi = crange
                 if rlo <= row_index < rhi and clo <= col_index < chi:
-                    return sub(r"\n+", "\n", str(sheet.cell(rlo, clo).value).strip(".…, \n"))
+                    return sub(r"[\t ]*\n+[\t ]*", "\n", str(sheet.cell(rlo, clo).value).strip(".…, \n"))
         return cell
 
     @staticmethod

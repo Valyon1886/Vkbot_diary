@@ -111,8 +111,8 @@ class VkBotChat:
                                 await_time_to_hours = round(await_time / 3600, 1)
                                 await_time_string = str(int(await_time_to_hours) if await_time_to_hours.is_integer()
                                                         else await_time_to_hours) + " ч"
-                            self.send_message(message=f'Последняя дата обновления расписания - {parsed_date_string}.\n'
-                                                      f'Бот обновляет расписание раз в {await_time_string}.')
+                            self.send_message(message=f'Последняя дата изменения расписания - {parsed_date_string}.\n'
+                                                      f'Бот проверяет расписание на обновление раз в {await_time_string}.')
                 except DoesNotExist:
                     self.send_message(message='Вы не ввели группу.\nПример формата ввода: ИКБО-03-19.')
 

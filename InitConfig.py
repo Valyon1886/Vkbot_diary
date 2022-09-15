@@ -135,6 +135,10 @@ class Config:
             changes_made = True
             Config._set_drop_schedule_tables(drop_tables=env_vars.get("BOT_DROP_SCHEDULE_TABLES", None))
 
+        if Config._config_dict.get("last_parsed_date", None) is None:
+            changes_made = True
+            Config.set_last_parsed_date(datetime.datetime.now())
+
         if changes_made:
             Config.save_config()
         if not file_exists:
@@ -420,3 +424,25 @@ class Config:
             значение очистки таблиц
         """
         return Config._config_dict["drop_tables"]
+
+    @staticmethod
+    def set_last_parsed_date(date: datetime.datetime) -> None:
+        """Сохраняет значение последней пропарсенной даты
+
+        Parameters
+        ----------
+        date: datetime.datetime
+            значение последней пропарсенной даты
+        """
+        Config._config_dict["last_parsed_date"] = date.replace(microsecond=0).isoformat()
+
+    @staticmethod
+    def get_last_parsed_date() -> datetime.datetime:
+        """Возвращает значение последней пропарсенной даты
+
+        Return
+        ----------
+        date: datetime.datetime
+            значение последней пропарсенной даты
+        """
+        return datetime.datetime.fromisoformat(Config._config_dict["last_parsed_date"])

@@ -38,6 +38,17 @@ class Parser:
         return Parser._bot_parsing
 
     @staticmethod
+    def set_bot_parsed_date(last_parsed_date: datetime) -> None:
+        """Устанавливает последнюю дату парсинга/начала парсинга
+
+        Parameters
+        ----------
+        last_parsed_date: datetime
+            дата последнего парсинга
+        """
+        Parser._parsed_date = last_parsed_date
+
+    @staticmethod
     def get_bot_parsed_date() -> datetime:
         """Возвращает последнюю дату парсинга/начала парсинга
 
@@ -69,9 +80,11 @@ class Parser:
             пропарсены все ли файлы
         """
         Parser._bot_parsing = True
+        last_parsed_date = Parser._parsed_date
         Parser._parsed_date = datetime.now()
         Parser._parsed_percent = 0.0
         files_parsed = []
+        hashed_files = 0
         result_links = []
         parse_all_files_anyway = False
         number_of_tries = 3
@@ -154,6 +167,7 @@ class Parser:
                         else:
                             print(Fore.GREEN +
                                   f"Хеш файла {x.split('/')[-1]} идентичен. Пропускаем..." + Style.RESET_ALL)
+                            hashed_files += 1
                         break
                     else:
                         if _try != 0:
@@ -168,7 +182,12 @@ class Parser:
             print(Fore.LIGHTRED_EX + "Ни одного файла не удалось скачать! Сраные серваки МИРЭА..." + Style.RESET_ALL)
         Parser._lesson_times_parsed_for_table = False
         Parser._bot_parsing = False
-        Parser._parsed_date = datetime.now()
+        if len(result_links) - hashed_files > 0:
+            Parser._parsed_date = datetime.now()
+            Config.set_last_parsed_date(Parser._parsed_date)
+            Config.save_config()
+        else:
+            Parser._parsed_date = last_parsed_date
         return all(files_parsed)
 
     @staticmethod
@@ -252,7 +271,8 @@ class Parser:
                 number_of_lessons = Parser._get_number_of_lessons(3 + skip_to_curr_day, 0, sheet)
                 for lesson in range(number_of_lessons):
                     for evenness in range(2):
-                        lesson_number = int(sheet.cell(3 + lesson * 2 + skip_to_curr_day, start_offset + 1).value)
+                        lesson_number = int(Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
+                                                                  start_offset + 1, sheet))
                         if not Parser._lesson_times_parsed_for_table:
                             lesson_start_time = Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
                                                                       start_offset + 2, sheet)

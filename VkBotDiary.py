@@ -155,6 +155,7 @@ def main() -> None:
     if Config.get_init_database():
         InitDatabase.ensure_start_data_added()
     if "checking_schedule_on_changes" not in [i.name for i in threads()]:
+        Parser.set_bot_parsed_date(Config.get_last_parsed_date())
         thread_1 = Thread(target=checking_schedule_on_changes, name="checking_schedule_on_changes", daemon=True)
         print(Fore.CYAN + "Бот запустил поток проверки расписания!" + Style.RESET_ALL)
         thread_1.start()

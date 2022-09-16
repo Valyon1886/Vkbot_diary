@@ -93,8 +93,12 @@ class VkBotChat:
                     self.send_message(self._functions.schedule_menu(user_message, group))
                     if search(r'(на [а-я]+( [а-я]+)?)', user_message):
                         parsed_date = Parser.get_bot_parsed_date()
-                        parsed_date_string = ("сегодня " if parsed_date.date() == datetime.now().date()
-                                              else "вчера ") + f'в {parsed_date.strftime("%H:%M")}'
+                        if (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                            - parsed_date.replace(hour=0, minute=0, second=0, microsecond=0)).days > 1:
+                            parsed_date_string = f'{parsed_date.strftime("%d.%m.%y")} '
+                        else:
+                            parsed_date_string = "сегодня " if parsed_date.date() == datetime.now().date() else "вчера "
+                        parsed_date_string += f'в {parsed_date.strftime("%H:%M")}'
                         if Parser.get_bot_parsing_state():
                             self.send_message(message='Бот сейчас обновляет расписание '
                                                       f'({Parser.get_bot_parsed_percent()}%) и оно может поменяться.\n'

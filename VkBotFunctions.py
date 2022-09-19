@@ -79,6 +79,8 @@ class VkBotFunctions:
             keyboard.add_button('Какая неделя?')
             keyboard.add_button('Какая группа?')
             keyboard.add_line()
+            keyboard.add_button('Когда обновлялось расписание?', color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
             keyboard.add_button('Назад')
 
         if user_message == 'мем':

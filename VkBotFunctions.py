@@ -185,6 +185,8 @@ class VkBotFunctions:
                 if user_message == "на следующую неделю":
                     start_date = start_date + timedelta(days=7)
                 for i in range(len(self._week_days)):
+                    if i != 0:
+                        full_sentence += "▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣\n"
                     week_day_number = i
                     week_day = self._week_days[i]
                     day_date = start_date + timedelta(days=week_day_number)
@@ -199,7 +201,7 @@ class VkBotFunctions:
                         full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}):\n{schedule_sentence}\n\n'
                     else:
                         full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}) - выходной.\n\n'
-                return f'Расписание {user_message}: {full_sentence}'
+                return f'Расписание {user_message}:\n{full_sentence}'
         elif user_message == "какая неделя?":
             week_number = self._get_number_week(datetime.now())
             return f'Сейчас {str(week_number)} неделя. {"Чётная" if week_number % 2 == 0 else "Нечётная"}.'

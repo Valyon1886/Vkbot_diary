@@ -98,7 +98,7 @@ class Parser:
             uni_names = soup.find("div", {"class": "schedule"}).find_all("a", {"class": "uk-text-bold"})
             uni_names = list(set([i.contents[0] for i in uni_names]))
             with suppress(ValueError):
-                uni_names.remove("Институт вечернего и заочного образования")
+                uni_names.remove("Филиал в городе Ставрополе")
             for name in uni_names:
                 links = []
                 nav_links = soup.find("div", {"class": "schedule"}).findAll(string=name)
@@ -227,7 +227,7 @@ class Parser:
         first_col = sheet.col_slice(start_offset, 0, 4)
         for col in range(1, num_cols):
             curr_col = sheet.col_slice(col, 0, 4)
-            if all(first_col[i].value != curr_col[i].value for i in range(len(first_col))):
+            if all(first_col[i].value != curr_col[i].value for i in range(1, len(first_col))):
                 start_offset = col - 1
                 break
         group_count = -1
@@ -267,6 +267,7 @@ class Parser:
                 has_url = False
 
             skip_to_curr_day = 0
+            lesson_numbers_parsed = []
 
             for day in range(6):
                 number_of_lessons = Parser._get_number_of_lessons(3 + skip_to_curr_day, 0, sheet)
@@ -274,7 +275,8 @@ class Parser:
                     for evenness in range(2):
                         lesson_number = int(float(Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
                                                                         start_offset + 1, sheet)))
-                        if not Parser._lesson_times_parsed_for_table:
+                        if not Parser._lesson_times_parsed_for_table and lesson_number not in lesson_numbers_parsed:
+                            lesson_numbers_parsed.append(lesson_number)
                             lesson_start_time = Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
                                                                       start_offset + 2, sheet)
                             lesson_end_time = Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,

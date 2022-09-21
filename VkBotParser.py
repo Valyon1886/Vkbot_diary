@@ -3,6 +3,7 @@ from contextlib import suppress
 from datetime import time, datetime
 from hashlib import md5
 from re import search, findall, sub
+from time import sleep
 from traceback import print_exception
 
 from bs4 import BeautifulSoup
@@ -141,8 +142,7 @@ class Parser:
         tables_count = len(result_links)
 
         for x in result_links:
-            if not search(r"(зач|экз|сессия)", x.lower()) and ".xls" in x.lower() and \
-                    search(r"\d(-kurs?|к|\sкурс|_курс)", x.lower()):
+            if search(r"\d([-_])?(kurs|k)[^/]*\.xls", x.lower()):
                 for _try in range(number_of_tries):
                     req = get(x)
                     if req.status_code == 200:
@@ -176,6 +176,7 @@ class Parser:
                         print(Fore.RED + f"Ошибка {req.status_code} при скачивании файла {x.split('/')[-1]}!" +
                               (f' Осталось попыток - {str(number_of_tries - _try - 1)}'
                                if (number_of_tries - _try - 1) != 0 else '') + Style.RESET_ALL)
+                        sleep(1)
                 parsed_tables += 1
                 Parser._parsed_percent = round((parsed_tables / tables_count) * 100, 1)
         if not any(files_parsed):
@@ -271,8 +272,8 @@ class Parser:
                 number_of_lessons = Parser._get_number_of_lessons(3 + skip_to_curr_day, 0, sheet)
                 for lesson in range(number_of_lessons):
                     for evenness in range(2):
-                        lesson_number = int(Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
-                                                                  start_offset + 1, sheet))
+                        lesson_number = int(float(Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
+                                                                        start_offset + 1, sheet)))
                         if not Parser._lesson_times_parsed_for_table:
                             lesson_start_time = Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
                                                                       start_offset + 2, sheet)
@@ -287,9 +288,11 @@ class Parser:
                         lesson_type = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
                                                             col_index + 1, sheet)
                         lecturer = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
-                                                         col_index + 2, sheet).replace(",", ".")
+                                                         col_index + 2, sheet).replace(",", "\n")
+                        lecturer = sub(r"[\t ]*\n+[\t ]*", "\n", lecturer)
                         classroom = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
-                                                          col_index + 3, sheet)
+                                                          col_index + 3, sheet).replace(",", "\n")
+                        classroom = sub(r"[\t ]*\n+[\t ]*", "\n", classroom)
                         if has_url:
                             url = Parser._get_cell_info(3 + evenness + lesson * 2 + skip_to_curr_day,
                                                         col_index + 4, sheet)
@@ -427,3 +430,11 @@ class Parser:
             rlo, rhi, clo, chi = crange
             if rlo <= row_index < rhi and clo <= col_index < chi:
                 return (rhi - rlo) // 2
+        # Workaround for 'xls' files cause 'sheet.merged_cells' is empty
+        inc = 2
+        while True:
+            if sheet.cell(row_index + inc, col_index).value.strip() != "" or \
+                    sheet.cell(row_index + inc, col_index + 1).value.strip() == "":
+                break
+            inc += 2
+        return inc // 2

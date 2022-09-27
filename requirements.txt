@@ -3,9 +3,9 @@ vk-api
 xlrd==1.2.0
 PyMySQL==1.0.2
 cryptography==3.4.8
-peewee==3.14.10
+peewee==3.15.3
 SpeechRecognition==3.8.1
-colorama==0.4.4
-requests==2.27.1
+colorama==0.4.5
+requests==2.28.1
 dateparser==1.1.1
 python-dateutil==2.8.2

@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
 from random import randint, choice
-from re import findall
-from typing import Tuple, List
+from re import findall, sub, IGNORECASE
+from typing import Tuple, List, Optional
 
 from peewee import DoesNotExist
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 from InitConfig import Config
 from MySQLStorage import Users_communities, Weeks, Days, Subjects, Lesson_start_end, Users_tasks
+from VkBotStatus import States, VkBotStatus
 
 
 class VkBotFunctions:
@@ -67,7 +68,8 @@ class VkBotFunctions:
             keyboard.add_button('Расписание', color=VkKeyboardColor.PRIMARY)
             keyboard.add_button('Задачи', color=VkKeyboardColor.POSITIVE)
             keyboard.add_line()
-            keyboard.add_button('Мем')
+            keyboard.add_button('Препод')
+            keyboard.add_button('Мем', color=VkKeyboardColor.NEGATIVE)
 
         if user_message == 'расписание':
             keyboard.add_button('На сегодня', color=VkKeyboardColor.POSITIVE)
@@ -78,6 +80,14 @@ class VkBotFunctions:
             keyboard.add_line()
             keyboard.add_button('Какая неделя?')
             keyboard.add_button('Какая группа?')
+            keyboard.add_line()
+            keyboard.add_button('Когда обновлялось расписание?', color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
+            keyboard.add_button('Назад')
+
+        if user_message == 'препод':
+            keyboard.add_button('На эту неделю', color=VkKeyboardColor.POSITIVE)
+            keyboard.add_button('На следующую неделю', color=VkKeyboardColor.NEGATIVE)
             keyboard.add_line()
             keyboard.add_button('Когда обновлялось расписание?', color=VkKeyboardColor.PRIMARY)
             keyboard.add_line()
@@ -129,15 +139,17 @@ class VkBotFunctions:
         keyboard = keyboard.get_keyboard()
         return keyboard
 
-    def schedule_menu(self, user_message: str, group: str) -> str:
+    def schedule_menu(self, user_message: str, group: Optional[str], state: States) -> str:
         """Обрабатывает запрос пользователя и выдает ответ.
 
         Parameters
         ----------
         user_message : str
             сообщение пользователя
-        group : str
+        group : Optional[str]
             группа пользователя
+        state : States
+            состояние бота для пользователя
         Return
         ----------
         full_sentence: str
@@ -153,8 +165,9 @@ class VkBotFunctions:
             return "Семестр закончился, расписание не действительно. Подожди до следующего семестра"
 
         if user_message in ["на сегодня", "на завтра", "на эту неделю", "на следующую неделю"]:
-            lessons_start_end = {i.lesson_number: [i.start_time, i.end_time]
-                                 for i in Lesson_start_end.select().execute()}
+            lessons_start_end = {
+                i.lesson_number: [i.start_time, i.end_time] for i in Lesson_start_end.select().execute()
+            }
             start_date = datetime.now() - timedelta(days=datetime.now().isoweekday() - 1)
             if user_message in ["на сегодня", "на завтра"]:
                 if user_message == "на сегодня":
@@ -175,7 +188,7 @@ class VkBotFunctions:
                     week_day = "Воскресенье"
                     full_sentence = ""
                 if full_sentence != "":
-                    return f'Расписание на {user_message.split(" ")[-1]}:\n{week_day} ' \
+                    return f'Расписание на {user_message.split(" ")[-1]}:\n\n{week_day} ' \
                            f'({day_date.strftime("%d.%m.%Y")}):\n{full_sentence}'
                 else:
                     return f'{user_message.split(" ")[-1].capitalize()} - {week_day} ' \
@@ -184,31 +197,166 @@ class VkBotFunctions:
                 full_sentence = ""
                 if user_message == "на следующую неделю":
                     start_date = start_date + timedelta(days=7)
-                for i in range(len(self._week_days)):
-                    if i != 0:
-                        full_sentence += "▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣\n"
-                    week_day_number = i
-                    week_day = self._week_days[i]
-                    day_date = start_date + timedelta(days=week_day_number)
-                    schedule_sentence = self._make_schedule(
-                        group,
-                        week_day,
-                        day_date,
+                if state == States.REQUEST_TEACHER:
+                    full_sentence = self.get_teacher_schedule(
+                        VkBotStatus.get_data(self._user_id),
+                        start_date,
                         lessons_start_end,
                         next_week=user_message == "на следующую неделю"
                     )
-                    if schedule_sentence:
-                        full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}):\n{schedule_sentence}\n\n'
-                    else:
-                        full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}) - выходной.\n\n'
+                else:
+                    for i in range(len(self._week_days)):
+                        if i != 0:
+                            full_sentence += "▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣\n"
+                        week_day_number = i
+                        week_day = self._week_days[i]
+                        day_date = start_date + timedelta(days=week_day_number)
+                        schedule_sentence = self._make_schedule(
+                            group,
+                            week_day,
+                            day_date,
+                            lessons_start_end,
+                            next_week=user_message == "на следующую неделю"
+                        )
+                        if schedule_sentence:
+                            full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}):\n{schedule_sentence}\n\n'
+                        else:
+                            full_sentence += f'\n{week_day} ({day_date.strftime("%d.%m.%Y")}) - выходной.\n\n'
                 return f'Расписание {user_message}:\n{full_sentence}'
         elif user_message == "какая неделя?":
             week_number = self._get_number_week(datetime.now())
             return f'Сейчас {str(week_number)} неделя. {"Чётная" if week_number % 2 == 0 else "Нечётная"}.'
 
+    def get_teacher_schedule(self, teacher: str, day_date: datetime, lessons_start_end: dict, next_week=False):
+        """Преобразует расписание преподавателя в сообщение для пользователя.
+
+        Parameters
+        ----------
+        teacher : str
+            преподаватель
+        day_date: datetime
+            День недели в формате datetime
+        lessons_start_end : dict
+            словарь начала и окончания каждой пары
+        next_week : bool
+            вывод на следующую неделю (по умолчанию на эту)
+        Return
+        ----------
+        full_sentence: str
+            преобразованная строка
+        """
+        full_sentence = ""
+        space = "&#8194;"
+        new_line = '\n'
+        even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
+
+        try:
+            subjects: List[Subjects] = [i for i in Subjects.select().where(
+                Subjects.teacher.iregexp(sub(r"[её]", r"[её]", teacher, flags=IGNORECASE))
+            ).execute()]
+            if len(subjects) == 0:
+                raise DoesNotExist()
+
+            subj_ids = set(i.schedule_of_subject_id for i in subjects)
+
+            schedules_of_day: List[Days] = [i for i in Days.select().where(
+                Days.subject_schedules_of_day_id.in_(subj_ids)).execute()]
+
+            sch_ids = set(i.day_of_week_id for i in schedules_of_day)
+
+            weeks: List[Weeks] = [i for i in Weeks.select().where(
+                (Weeks.days_of_group_id.in_(sch_ids)) & (Weeks.even == even_week)).execute()]
+
+            weeks_ids = set(i.days_of_group_id for i in weeks)
+
+            schedules_of_day = sorted(
+                list(filter(
+                    lambda s: s.day_of_week_id in weeks_ids,
+                    schedules_of_day
+                )),
+                key=lambda s: s.subject_schedules_of_day_id
+            )
+
+            schedules_of_days = []
+            for d in self._week_days:
+                schedules_of_days += [[]]
+                for s in schedules_of_day:
+                    if s.day_of_week == d:
+                        schedules_of_days[-1] += [s]
+                if len(schedules_of_days[-1]) == 0:
+                    schedules_of_days.pop()
+
+            for i in range(len(schedules_of_days)):
+                if i != 0:
+                    full_sentence += "\n\n▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣\n"
+                week_day = schedules_of_days[i][0].day_of_week
+                full_sentence += f'\n{week_day} (' + (
+                            day_date + timedelta(days=self._week_days.index(week_day))
+                ).strftime("%d.%m.%Y") + '):\n'
+                subj_ids_from_days = [d.subject_schedules_of_day_id for d in schedules_of_days[i]]
+
+                def ch(s: Subjects):
+                    cur_day = None
+                    for d in schedules_of_days[i]:
+                        if d.subject_schedules_of_day_id == s.schedule_of_subject_id:
+                            cur_day = d
+                            break
+                    if cur_day is None:
+                        return s, None
+                    group = [w.group for w in weeks if w.days_of_group_id == cur_day.day_of_week_id]
+                    return s, group
+
+                subj_day = []
+                for subj in map(ch, filter(lambda s: s.schedule_of_subject_id in subj_ids_from_days, subjects)):
+                    for s in range(len(subj_day)):
+                        if subj_day[s][0].lesson_number == subj[0].lesson_number and \
+                                subj_day[s][0].subject.lower() == subj[0].subject.lower() and \
+                                subj_day[s][0].teacher.lower() == subj[0].teacher.lower():
+                            subj_day[s][1].extend(subj[1])
+                            break
+                    else:
+                        subj_day.append(subj)
+                subj_day = sorted(subj_day, key=lambda s: s[0].lesson_number)
+
+                for subj in range(len(subj_day)):
+                    if subj != 0:
+                        full_sentence += f"{space * 2}------------------------------\n"
+                    full_sentence += space * 2
+                    full_sentence += f"{subj_day[subj][0].lesson_number} пара: с "
+                    full_sentence += f"{lessons_start_end[subj_day[subj][0].lesson_number][0].strftime('%H:%M')} " \
+                                     f"по {lessons_start_end[subj_day[subj][0].lesson_number][1].strftime('%H:%M')}" \
+                                     f"\n{space * 4}{subj_day[subj][0].subject.replace(new_line, f'{new_line}{space * 4}')}"
+                    if subj_day[subj][0].lesson_type:
+                        type_subj_l = subj_day[subj][0].lesson_type.split(new_line)
+                        if all(all(i == type_subj_l[j] for i in type_subj_l) for j in range(len(type_subj_l))):
+                            full_sentence += f"\n{space * 4}Вид занятия: {type_subj_l[0]}"
+                        else:
+                            full_sentence += f"\n{space * 4}Виды занятий: {', '.join(type_subj_l)}"
+                    if subj_day[subj][0].teacher:
+                        if len(subj_day[subj][0].teacher.split(new_line)) == 1:
+                            full_sentence += f"\n{space * 4}Препод: {subj_day[subj][0].teacher} "
+                        else:
+                            full_sentence += f"\n{space * 4}Преподы: {subj_day[subj][0].teacher.replace(new_line, f'{new_line}{space * 13} ')}"
+                    if subj_day[subj][0].class_number:
+                        audit_subj_l = subj_day[subj][0].class_number.split(new_line)
+                        if len(audit_subj_l) == 1 or \
+                                all(all(i == audit_subj_l[j] for i in audit_subj_l) for j in range(len(audit_subj_l))):
+                            full_sentence += f"\n{space * 4}Аудитория: {audit_subj_l[0]}"
+                        else:
+                            full_sentence += f"\n{space * 4}Аудитории: {subj_day[subj][0].class_number.replace(new_line, ', ')}"
+                    if subj_day[subj][1] is not None:
+                        if len(subj_day[subj][1]) == 1:
+                            full_sentence += f"\n{space * 4}Группа: {subj_day[subj][1][0]}"
+                        else:
+                            full_sentence += f"\n{space * 4}Группы: {f', '.join(subj_day[subj][1])}"
+                    full_sentence += "\n"
+        except DoesNotExist:
+            full_sentence += "\nДанные по расписанию не доступны\nПопробуйте изменить имя препода"
+        return full_sentence
+
     def _make_schedule(self, group: str, week_day: str,
                        day_date: datetime, lessons_start_end: dict, next_week=False) -> str:
-        """Преобразует часть расписание в сообщение для пользователя.
+        """Преобразует часть расписания в сообщение для пользователя.
 
         Parameters
         ----------

@@ -2,6 +2,7 @@ from datetime import datetime
 from io import BytesIO
 from random import randint, choice
 from re import search, findall, split as re_split
+from textwrap import wrap
 from typing import Union
 
 from dateparser import parse as date_parse
@@ -58,9 +59,9 @@ class VkBotChat:
                 VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY:
             user_message = user_message.lower()
             self._handle_add_delete_community(user_message)
-        elif VkBotStatus.get_state(self._user_id) != States.ADD_COMMUNITY and \
-                VkBotStatus.get_state(self._user_id) != States.DELETE_COMMUNITY and \
-                VkBotStatus.get_state(self._user_id) != States.NONE:
+        elif VkBotStatus.get_state(self._user_id) not in [States.ADD_COMMUNITY, States.DELETE_COMMUNITY,
+                                                          States.REQUEST_SCHEDULE, States.REQUEST_TEACHER,
+                                                          States.WAITING_FOR_TEACHER, States.NONE]:
             self._handle_add_delete_change_task(user_message)
         elif user_message is not None:
             user_message = user_message.lower()
@@ -81,23 +82,46 @@ class VkBotChat:
                 else:
                     self.send_message(message='Такой группы нет, попробуй еще раз.')
 
+            elif user_message == 'препод':
+                self._flag = False
+                keyboard = self._functions.create_menu(user_message)
+                VkBotStatus.set_state(self._user_id, States.REQUEST_TEACHER)
+                self.send_message(message='Выбери возможность', keyboard=keyboard)
+
             elif user_message == 'расписание':
                 self._flag = False
                 keyboard = self._functions.create_menu(user_message)
+                VkBotStatus.set_state(self._user_id, States.REQUEST_SCHEDULE)
                 self.send_message(message='Выбери возможность', keyboard=keyboard)
 
             elif user_message == 'когда обновлялось расписание?':
                 self._send_update_string()
+                VkBotStatus.set_state(self._user_id, States.NONE)
+
+            elif VkBotStatus.get_state(self._user_id) == States.WAITING_FOR_TEACHER:
+                doing = VkBotStatus.get_data(self._user_id)
+                VkBotStatus.set_state(self._user_id, States.WAITING_FOR_TEACHER, user_message)
+                self.send_message(self._functions.schedule_menu(doing, None, States.REQUEST_TEACHER))
+                self._send_update_string()
+                VkBotStatus.set_state(self._user_id, States.NONE)
 
             elif search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', user_message):
-                try:
-                    group = Users_groups.get(Users_groups.user_id == self._user_id).group \
-                        if user_message != 'какая неделя?' else None
-                    self.send_message(self._functions.schedule_menu(user_message, group))
-                    if search(r'(на [а-я]+( [а-я]+)?)', user_message):
-                        self._send_update_string()
-                except DoesNotExist:
-                    self.send_message(message='Вы не ввели группу.\nПример формата ввода: ИКБО-03-19.')
+                if VkBotStatus.get_state(self._user_id) == States.REQUEST_TEACHER and \
+                        search(r'(на [а-я]+( [а-я]+)?)', user_message):
+                    self._flag = False
+                    VkBotStatus.set_state(self._user_id, States.WAITING_FOR_TEACHER, user_message)
+                    self._create_cancel_menu(message='Введите имя препода.\nПример формата ввода: \'Кудж С.А.\'.',
+                                             add_to_existing=True)
+                else:
+                    try:
+                        group = Users_groups.get(Users_groups.user_id == self._user_id).group \
+                            if user_message != 'какая неделя?' else None
+                        self.send_message(self._functions.schedule_menu(user_message, group, States.REQUEST_SCHEDULE))
+                        if search(r'(на [а-я]+( [а-я]+)?)', user_message):
+                            self._send_update_string()
+                    except DoesNotExist:
+                        self.send_message(message='Вы не ввели группу.\nПример формата ввода: ИКБО-03-19.')
+                    VkBotStatus.set_state(self._user_id, States.NONE)
 
             elif user_message == 'задачи':
                 self._flag = False
@@ -177,6 +201,7 @@ class VkBotChat:
             elif user_message == 'назад':
                 self._flag = False
                 keyboard = self._functions.create_menu("Назад")
+                VkBotStatus.set_state(self._user_id, States.NONE)
                 self.send_message(message='Возвращаемся...\nЧто хочешь посмотреть?', keyboard=keyboard)
 
             elif user_message == 'непонятное сообщение':
@@ -193,6 +218,7 @@ class VkBotChat:
 
         if self._flag:
             keyboard = self._functions.create_menu("Продолжить")
+            VkBotStatus.set_state(self._user_id, States.NONE)
             self.send_message(message='Что хочешь посмотреть?', keyboard=keyboard)
 
     def _send_update_string(self) -> None:
@@ -237,22 +263,23 @@ class VkBotChat:
         sticker_id: int
             id стикера
         """
-        payload = {
-            'user_id': self._user_id,
-            'message': message,
-            'random_id': get_random_id()
-        }
-        if keyboard:
-            payload['keyboard'] = keyboard
-        if image_url:
-            arr = BytesIO(req_get(image_url).content)
-            arr.seek(0)
-            upload = VkUpload(self._vk_session)
-            photo = upload.photo_messages(arr)
-            payload['attachment'] = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
-        if sticker_id:
-            payload['sticker_id'] = sticker_id
-        self._vk_session.method('messages.send', payload)
+        for msg in wrap(message, width=6144, replace_whitespace=False):
+            payload = {
+                'user_id': self._user_id,
+                'message': msg,
+                'random_id': get_random_id()
+            }
+            if keyboard:
+                payload['keyboard'] = keyboard
+            if image_url:
+                arr = BytesIO(req_get(image_url).content)
+                arr.seek(0)
+                upload = VkUpload(self._vk_session)
+                photo = upload.photo_messages(arr)
+                payload['attachment'] = "photo{}_{}".format(photo[0]["owner_id"], photo[0]["id"])
+            if sticker_id:
+                payload['sticker_id'] = sticker_id
+            self._vk_session.method('messages.send', payload)
 
     def _create_cancel_menu(self, message="", add_to_existing=False, buttons=0, list_of_named_buttons=None) -> None:
         """Создаёт меню "Отмена"

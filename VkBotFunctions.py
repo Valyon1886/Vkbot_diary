@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from random import randint, choice
-from re import findall, sub, IGNORECASE
-from typing import Tuple, List, Optional
+from re import findall, sub, IGNORECASE, search
+from typing import Tuple, List, Optional, Set
 
 from peewee import DoesNotExist
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
@@ -227,6 +227,40 @@ class VkBotFunctions:
             week_number = self._get_number_week(datetime.now())
             return f'Сейчас {str(week_number)} неделя. {"Чётная" if week_number % 2 == 0 else "Нечётная"}.'
 
+    @staticmethod
+    def get_subjects(teacher: str) -> Tuple[List[Subjects], List[str]]:
+        """Получает предметы преподавателя.
+
+        Parameters
+        ----------
+        teacher : str
+            преподаватель
+        Return
+        ----------
+        subjects: List[Subjects]
+            список предметов
+        teachers: Set[str]
+            список преподавателей
+        """
+        teacher_regex = sub(r"[её]", r"[её]", teacher, flags=IGNORECASE)
+        subjects = [i for i in Subjects.select().where(
+            Subjects.teacher.iregexp(teacher_regex)
+        ).execute()]
+        teachers = set(t.teacher for t in subjects)
+        if any("\n" in t for t in teachers):
+            teachers = list(teachers)
+            for i in range(len(teachers)):
+                if "\n" in teachers[i]:
+                    new_str = "-"
+                    for part in teachers[i].split("\n"):
+                        if search(teacher_regex, part, flags=IGNORECASE):
+                            new_str = part.strip(" .")
+                            break
+                    teachers[i] = new_str
+            teachers = set(teachers)
+
+        return subjects, list(teachers)
+
     def get_teacher_schedule(self, teacher: str, day_date: datetime, lessons_start_end: dict, next_week=False):
         """Преобразует расписание преподавателя в сообщение для пользователя.
 
@@ -251,9 +285,7 @@ class VkBotFunctions:
         even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
 
         try:
-            subjects: List[Subjects] = [i for i in Subjects.select().where(
-                Subjects.teacher.iregexp(sub(r"[её]", r"[её]", teacher, flags=IGNORECASE))
-            ).execute()]
+            subjects, _ = self.get_subjects(teacher)
             if len(subjects) == 0:
                 raise DoesNotExist()
 

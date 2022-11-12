@@ -7,6 +7,7 @@ class States(Enum):
     REQUEST_SCHEDULE = auto()
     REQUEST_TEACHER = auto()
     WAITING_FOR_TEACHER = auto()
+    SELECTING_TEACHER = auto()
     ADD_COMMUNITY = auto()
     DELETE_COMMUNITY = auto()
     ADD_TASK_INIT = auto()

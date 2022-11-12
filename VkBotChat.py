@@ -59,9 +59,11 @@ class VkBotChat:
                 VkBotStatus.get_state(self._user_id) == States.DELETE_COMMUNITY:
             user_message = user_message.lower()
             self._handle_add_delete_community(user_message)
-        elif VkBotStatus.get_state(self._user_id) not in [States.ADD_COMMUNITY, States.DELETE_COMMUNITY,
-                                                          States.REQUEST_SCHEDULE, States.REQUEST_TEACHER,
-                                                          States.WAITING_FOR_TEACHER, States.NONE]:
+        elif VkBotStatus.get_state(self._user_id) in [States.ADD_TASK_INIT, States.ADD_TASK_HAS_DATE,
+                                                      States.DELETE_TASK_INIT, States.DELETE_TASK_HAS_DATE,
+                                                      States.CHANGE_TASK_INIT, States.CHANGE_TASK_HAS_DATE,
+                                                      States.CHANGE_TASK_CHOOSE, States.CHANGE_TASK_ENTER_DATA,
+                                                      States.CHANGE_TASK_ENTER_TIME]:
             self._handle_add_delete_change_task(user_message)
         elif user_message is not None:
             user_message = user_message.lower()
@@ -98,19 +100,39 @@ class VkBotChat:
                 self._send_update_string()
                 VkBotStatus.set_state(self._user_id, States.NONE)
 
-            elif VkBotStatus.get_state(self._user_id) == States.WAITING_FOR_TEACHER:
-                doing = VkBotStatus.get_data(self._user_id)
-                VkBotStatus.set_state(self._user_id, States.WAITING_FOR_TEACHER, user_message)
-                self.send_message(self._functions.schedule_menu(doing, None, States.REQUEST_TEACHER))
-                self._send_update_string()
-                VkBotStatus.set_state(self._user_id, States.NONE)
+            elif VkBotStatus.get_state(self._user_id) in [States.WAITING_FOR_TEACHER, States.SELECTING_TEACHER]:
+                do_search = True
+                if user_message == 'отмена':
+                    VkBotStatus.set_state(self._user_id, States.NONE)
+                    self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
+                    do_search = False
+                elif VkBotStatus.get_state(self._user_id) == States.WAITING_FOR_TEACHER:
+                    _, teachers = self._functions.get_subjects(user_message)
+                    if len(teachers) > 1:
+                        self._flag = False
+                        VkBotStatus.set_state(self._user_id, States.SELECTING_TEACHER,
+                                              VkBotStatus.get_data(self._user_id))
+                        self._create_cancel_menu(
+                            message='Бот нашёл несколько совпадений. Выберите соответствующее.',
+                            add_to_existing=True,
+                            buttons=len(teachers),
+                            list_of_named_buttons=teachers
+                        )
+                        do_search = False
+
+                if do_search:
+                    message_data = VkBotStatus.get_data(self._user_id)
+                    VkBotStatus.set_state(self._user_id, States.WAITING_FOR_TEACHER, user_message)
+                    self.send_message(self._functions.schedule_menu(message_data, None, States.REQUEST_TEACHER))
+                    self._send_update_string()
+                    VkBotStatus.set_state(self._user_id, States.NONE)
 
             elif search(r'(на [а-я]+( [а-я]+)?)|(какая [а-я]{6})', user_message):
                 if VkBotStatus.get_state(self._user_id) == States.REQUEST_TEACHER and \
                         search(r'(на [а-я]+( [а-я]+)?)', user_message):
                     self._flag = False
                     VkBotStatus.set_state(self._user_id, States.WAITING_FOR_TEACHER, user_message)
-                    self._create_cancel_menu(message='Введите имя препода.\nПример формата ввода: \'Кудж С.А.\'.',
+                    self._create_cancel_menu(message='Введите имя препода.\nПример формата ввода: "Кудж С.А.".',
                                              add_to_existing=True)
                 else:
                     try:

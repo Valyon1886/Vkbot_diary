@@ -243,6 +243,7 @@ class VkBotFunctions:
             список преподавателей
         """
         teacher_regex = sub(r"[её]", r"[её]", teacher, flags=IGNORECASE)
+        teacher_regex = teacher_regex.rstrip(".")
         subjects = [i for i in Subjects.select().where(
             Subjects.teacher.iregexp(teacher_regex)
         ).execute()]

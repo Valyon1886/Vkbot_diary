@@ -104,7 +104,7 @@ class VkBotChat:
                 do_search = True
                 if user_message == 'отмена':
                     VkBotStatus.set_state(self._user_id, States.NONE)
-                    self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
+                    self.send_message(f"Бот больше не {choice(['cлушает', 'внемлет'])}... ಠ╭╮ಠ")
                     do_search = False
                 elif VkBotStatus.get_state(self._user_id) == States.WAITING_FOR_TEACHER:
                     _, teachers = self._functions.get_subjects(user_message)
@@ -132,7 +132,7 @@ class VkBotChat:
                         search(r'(на [а-я]+( [а-я]+)?)', user_message):
                     self._flag = False
                     VkBotStatus.set_state(self._user_id, States.WAITING_FOR_TEACHER, user_message)
-                    self._create_cancel_menu(message='Введите имя препода.\nПример формата ввода: "Кудж С.А.".',
+                    self._create_cancel_menu(message='Введите имя препода.\nПример формата ввода: "Кудж С.А".',
                                              add_to_existing=True)
                 else:
                     try:
@@ -318,7 +318,7 @@ class VkBotChat:
             список названий для кнопок
         """
         self._flag = False
-        result_message = f"{choice(['Слушаю', 'Внимаю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)\n{message}" \
+        result_message = f"{choice(['Слушаю', 'Внемлю', 'У аппарата'])}... ( ͡° ͜ʖ ͡°)\n{message}" \
             if add_to_existing else message
         keyboard = self._functions.create_menu("клавиатура--отмена", buttons, list_of_named_buttons)
         self.send_message(message=result_message.strip(), keyboard=keyboard)
@@ -333,7 +333,7 @@ class VkBotChat:
         """
         if user_message == 'отмена':
             VkBotStatus.set_state(self._user_id, States.NONE)
-            self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
+            self.send_message(f"Бот больше не {choice(['cлушает', 'внемлет'])}... ಠ╭╮ಠ")
         else:
             communities_links = [i.strip() for i in re_split(', | |\n', user_message)]
 
@@ -391,7 +391,7 @@ class VkBotChat:
         """
         if user_message.lower() == 'отмена':
             VkBotStatus.set_state(self._user_id, States.NONE)
-            self.send_message(f"Бот больше не {choice(['cлушает', 'внимает'])}... ಠ╭╮ಠ")
+            self.send_message(f"Бот больше не {choice(['cлушает', 'внемлет'])}... ಠ╭╮ಠ")
         else:
             if VkBotStatus.get_state(self._user_id) == States.ADD_TASK_INIT or \
                     VkBotStatus.get_state(self._user_id) == States.CHANGE_TASK_ENTER_TIME:

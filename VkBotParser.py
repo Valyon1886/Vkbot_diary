@@ -142,7 +142,7 @@ class Parser:
         tables_count = len(result_links)
 
         for x in result_links:
-            if "zach_" not in x and search(r"\d([-_])?(kurs|k)[^/]*\.xls", x.lower()):
+            if all(s not in x for s in ["zach_", "_zachety"]) and search(r"\d([-_])?(kurs|k)[^/]*\.xls", x.lower()):
                 for _try in range(number_of_tries):
                     req = get(x)
                     if req.status_code == 200:

@@ -1,4 +1,4 @@
-FROM python:3.8.16-slim
+FROM python:3.8.17-slim
 
 # copy bot files and its requirements
 WORKDIR /VkBotDiary/
@@ -17,6 +17,6 @@ ENV TZ=Europe/Moscow
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Add docker-compose-wait tool
-ENV WAIT_VERSION 2.7.3
+ENV WAIT_VERSION 2.12.0
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/$WAIT_VERSION/wait ./wait-script
 RUN chmod 775 ./wait-script

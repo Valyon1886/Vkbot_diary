@@ -6,6 +6,7 @@ from re import search, findall, sub
 from time import sleep
 from traceback import print_exception
 
+from dateparser import parse as date_parse
 from bs4 import BeautifulSoup
 from colorama import Fore, Style
 from peewee import fn, DoesNotExist
@@ -15,7 +16,7 @@ from xlrd.sheet import Sheet
 
 from InitConfig import Config
 from InitSQL import InitSQL
-from MySQLStorage import Weeks, Days, Subjects, Lesson_start_end
+from MySQLStorage import Weeks, Days, Subjects, Lesson_start_end, Groups, ExamDays, Disciplines
 
 
 class Parser:
@@ -120,67 +121,69 @@ class Parser:
             return False
 
         tables_length = [
-            len([i for i in Weeks.select().limit(1).execute()]),
-            len([i for i in Days.select().limit(1).execute()]),
-            len([i for i in Subjects.select().limit(1).execute()])
+            len([i for i in Groups.select().limit(1).execute()]),
         ]
 
         if any([i == 0 for i in tables_length]) and not all([i == 0 for i in tables_length]) or \
                 Config.get_drop_schedule_tables():
             if Config.get_drop_schedule_tables():
                 print(Fore.LIGHTRED_EX +
-                      "Очищаем таблицы 'Weeks', 'Days', 'Subjects' по требованию пользователя!" + Style.RESET_ALL)
+                      "Очищаем таблицы с расписанием по требованию пользователя!" + Style.RESET_ALL)
             else:
                 print(Fore.LIGHTRED_EX +
-                      "Одна из таблиц 'Weeks', 'Days' или 'Subjects' оказалась пуста! Заполняем все снова!" +
+                      "Одна из таблиц с расписанием оказалась пуста! Заполняем все снова!" +
                       Style.RESET_ALL)
             parse_all_files_anyway = True
-            InitSQL.get_DB().drop_tables([Weeks, Days, Subjects, Lesson_start_end])
-            InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Lesson_start_end])
+            InitSQL.get_DB().drop_tables([Groups, Weeks, Days, Subjects, ExamDays, Disciplines, Lesson_start_end])
+            InitSQL.get_DB().create_tables([Groups, Weeks, Days, Subjects, ExamDays, Disciplines, Lesson_start_end])
+
+        # any(s in x.lower() for s in ["zach_", "_zachety"])
+        # all(s not in x.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"])
+        result_links = [
+            l for l in result_links
+            if any(s in l.lower() for s in ["_ekzameny", "ekz_"]) and search(r"\d([-_])?(kurs|k)[^/]*\.xls", l.lower())
+        ]
 
         parsed_tables = 0
         tables_count = len(result_links)
 
         for x in result_links:
-            # any(s in x.lower() for s in ["zach_", "_zachety"])
-            # all(s not in x.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"])
-            if any(s in x.lower() for s in ["zach_", "_zachety"]) and search(r"\d([-_])?(kurs|k)[^/]*\.xls", x.lower()):
-                for _try in range(number_of_tries):
-                    req = get(x)
-                    if req.status_code == 200:
-                        if _try != 0:
-                            files_parsed.pop()
-                        files_parsed.append(True)
-                        md5_hash = md5(req.content).hexdigest()
-                        if Parser._schedule_info.get(x.split('/')[-1], None) != md5_hash or \
-                                parse_all_files_anyway:
-                            print(Fore.LIGHTGREEN_EX + f"Бот парсит файл {x.split('/')[-1]}" + Style.RESET_ALL)
-                            try:
-                                Parser._parse_table_to_DB(req.content)
-                                print(Fore.GREEN + f"Бот пропарсил файл {x.split('/')[-1]}" + Style.RESET_ALL)
-                                Parser._schedule_info[x.split('/')[-1]] = md5_hash
-                                Config.set_schedule_info(Parser._schedule_info)
-                                Config.save_config()
-                            except BaseException as ex:
-                                print(Fore.RED +
-                                      f"Ошибка {type(ex).__name__}: {', '.join(ex.args)} при парсинге файла {x.split('/')[-1]}!" +
-                                      " Пропускаем...\nЕсли ошибка появляется больше 1-го раза," +
-                                      " Вам следует обратиться к разработчику" + Style.RESET_ALL)
-                        else:
-                            print(Fore.GREEN +
-                                  f"Хеш файла {x.split('/')[-1]} идентичен. Пропускаем..." + Style.RESET_ALL)
-                            hashed_files += 1
-                        break
+            for _try in range(number_of_tries):
+                req = get(x)
+                if req.status_code == 200:
+                    if _try != 0:
+                        files_parsed.pop()
+                    files_parsed.append(True)
+                    md5_hash = md5(req.content).hexdigest()
+                    if Parser._schedule_info.get(x.split('/')[-1], None) != md5_hash or \
+                            parse_all_files_anyway:
+                        print(Fore.LIGHTGREEN_EX + f"Бот парсит файл {x.split('/')[-1]}" + Style.RESET_ALL)
+                        try:
+                            Parser._parse_table_to_DB(req.content)
+                            print(Fore.GREEN + f"Бот пропарсил файл {x.split('/')[-1]}" + Style.RESET_ALL)
+                            Parser._schedule_info[x.split('/')[-1]] = md5_hash
+                            Config.set_schedule_info(Parser._schedule_info)
+                            Config.save_config()
+                        except BaseException as ex:
+                            print(Fore.RED +
+                                  f"Ошибка {type(ex).__name__}: {', '.join(ex.args)} при парсинге файла {x.split('/')[-1]}!" +
+                                  " Пропускаем...\nЕсли ошибка появляется больше 1-го раза," +
+                                  " Вам следует обратиться к разработчику" + Style.RESET_ALL)
                     else:
-                        if _try != 0:
-                            files_parsed.pop()
-                        files_parsed.append(False)
-                        print(Fore.RED + f"Ошибка {req.status_code} при скачивании файла {x.split('/')[-1]}!" +
-                              (f' Осталось попыток - {str(number_of_tries - _try - 1)}'
-                               if (number_of_tries - _try - 1) != 0 else '') + Style.RESET_ALL)
-                        sleep(1)
-                parsed_tables += 1
-                Parser._parsed_percent = round((parsed_tables / tables_count) * 100, 1)
+                        print(Fore.GREEN +
+                              f"Хеш файла {x.split('/')[-1]} идентичен. Пропускаем..." + Style.RESET_ALL)
+                        hashed_files += 1
+                    break
+                else:
+                    if _try != 0:
+                        files_parsed.pop()
+                    files_parsed.append(False)
+                    print(Fore.RED + f"Ошибка {req.status_code} при скачивании файла {x.split('/')[-1]}!" +
+                          (f' Осталось попыток - {str(number_of_tries - _try - 1)}'
+                           if (number_of_tries - _try - 1) != 0 else '') + Style.RESET_ALL)
+                    sleep(1)
+            parsed_tables += 1
+            Parser._parsed_percent = round((parsed_tables / tables_count) * 100, 1)
         if not any(files_parsed):
             print(Fore.LIGHTRED_EX + "Ни одного файла не удалось скачать! Сраные серваки МИРЭА..." + Style.RESET_ALL)
         Parser._lesson_times_parsed_for_table = False
@@ -232,9 +235,41 @@ class Parser:
             if all(first_col[i].value != curr_col[i].value for i in range(1, len(first_col))):
                 start_offset = col - 1
                 break
+
+        try:
+            dates_cell = Parser._get_cell_info(1, 0, sheet).lower()
+            regular_sheet = "день" in dates_cell
+        except IndexError:
+            regular_sheet = True
+        print(Fore.YELLOW + f"Парсим {'обычный лист' if regular_sheet else 'экзаменационный лист'}!" + Style.RESET_ALL)
+
+        if regular_sheet:
+            Parser._parse_regular_sheet(sheet, start_offset)
+        else:
+            Parser._parse_exam_sheet(sheet)
+
+    @staticmethod
+    def _parse_regular_sheet(sheet: Sheet, start_offset: int):
+        """Обработка листа с обычным расписанием из таблицы в базу данных
+
+        Parameters
+        ----------
+        sheet: Sheet
+            лист из таблицы
+        start_offset: int
+            начальный оффсет для дат пар
+        """
+        num_cols = sheet.ncols
         group_count = -1
         day_count = -1
         print_status_in = num_cols // 15
+
+        group_max_count = Weeks.select(fn.MAX(Weeks.days_of_group_id)).scalar()
+        if group_max_count is not None and group_max_count > 0:
+            group_count = group_max_count
+        day_max_count = Days.select(fn.MAX(Days.subject_schedules_of_day_id)).scalar()
+        if day_max_count is not None and day_max_count > 0:
+            day_count = day_max_count
 
         existing_records = [
             {
@@ -247,13 +282,6 @@ class Parser:
             }
         ]
 
-        group_max_count = Weeks.select(fn.MAX(Weeks.days_of_group_id)).scalar()
-        if group_max_count is not None and group_max_count > 0:
-            group_count = group_max_count
-        day_max_count = Days.select(fn.MAX(Days.subject_schedules_of_day_id)).scalar()
-        if day_max_count is not None and day_max_count > 0:
-            day_count = day_max_count
-
         for col_index in range(num_cols):
             if col_index % print_status_in == 0:
                 print(Fore.YELLOW + f"Прогресс: {int((col_index / num_cols) * 100)}%" + Style.RESET_ALL)
@@ -262,6 +290,12 @@ class Parser:
                 group_cell = findall(r'.{4}-\d{2}-\d{2}', group_cell)[0]
             else:
                 continue
+
+            try:
+                group_id = Groups.get(Groups.group == group_cell).group_id
+            except DoesNotExist:
+                g = Groups.create(group=group_cell)
+                group_id = g.group_id
 
             try:
                 has_url = str(sheet.cell(2, col_index + 4).value).strip(".…, \n") == "Ссылка"
@@ -309,8 +343,10 @@ class Parser:
                             if lesson == 0 else (day_count - int(not bool(evenness)))
 
                         try:
+                            if group_id is None:
+                                raise DoesNotExist()
                             day_id = Weeks.get(
-                                (Weeks.group == group_cell) & (Weeks.even == bool(evenness))).days_of_group_id
+                                (Weeks.group_id == group_id) & (Weeks.even == bool(evenness))).days_of_group_id
                             existing_records[evenness]["day_id"] = day_id
                         except DoesNotExist:
                             existing_records[evenness]["day_id"] = None
@@ -324,7 +360,7 @@ class Parser:
 
                         if len([i for i in Subjects.select().where(
                                 (Subjects.schedule_of_subject_id == existing_records[evenness]["subject_id"]) &
-                                (Subjects.lesson_number == lesson_number)).execute()]) == 0:
+                                (Subjects.lesson_number == lesson_number)).limit(1).execute()]) == 0:
                             # print("Создаём " +
                             #       ', '.join([str(lesson_number), subject, lesson_type, lecturer, classroom, url])
                             #       + f" в subject_id {str(schedule_of_subject_id)}")
@@ -354,24 +390,179 @@ class Parser:
 
                         if len([i for i in Days.select().where(
                                 (Days.day_of_week_id == existing_records[evenness]["day_id"]) &
-                                (Days.day_of_week == Parser._week_days[day])).execute()]) == 0:
+                                (Days.day_of_week == Parser._week_days[day])).limit(1).execute()]) == 0:
                             if len([i for i in Days.select().where(
                                     (Days.day_of_week_id == day_of_week_id) &
-                                    (Days.day_of_week == Parser._week_days[day])).execute()]) == 0:
+                                    (Days.day_of_week == Parser._week_days[day])).limit(1).execute()]) == 0:
                                 Days.create(day_of_week_id=day_of_week_id,
                                             day_of_week=Parser._week_days[day],
                                             subject_schedules_of_day_id=day_count + 1)
                                 day_count += 1
 
                         if len([i for i in Weeks.select().where(
-                                (Weeks.group == group_cell) & (Weeks.even == bool(evenness))).execute()]) == 0:
-                            Weeks.create(group=group_cell,
+                                (Weeks.group_id == group_id) &
+                                (Weeks.even == bool(evenness))).limit(1).execute()]) == 0:
+                            Weeks.create(group_id=group_id,
                                          even=bool(evenness),
                                          days_of_group_id=group_count + 1)
                             group_count += 1
                 skip_to_curr_day += number_of_lessons * 2
 
             Parser._lesson_times_parsed_for_table = True
+
+    @staticmethod
+    def _parse_exam_sheet(sheet: Sheet):
+        """Обработка листа с экзаменационным расписанием из таблицы в базу данных
+
+        Parameters
+        ----------
+        sheet: Sheet
+            лист из таблицы
+        """
+        num_cols = sheet.ncols
+        print_status_in = num_cols // 15
+        discipline_count = -1
+
+        discipline_max_count = Disciplines.select(fn.MAX(Disciplines.discipline_id)).scalar()
+        if discipline_max_count is not None and discipline_max_count > 0:
+            discipline_count = discipline_max_count
+
+        for col_index in range(num_cols):
+            if col_index % print_status_in == 0:
+                print(Fore.YELLOW + f"Прогресс: {int((col_index / num_cols) * 100)}%" + Style.RESET_ALL)
+            group_cell = str(sheet.cell(1, col_index).value)
+            if search(r'.{4}-\d{2}-\d{2}', group_cell):
+                group_cell = findall(r'.{4}-\d{2}-\d{2}', group_cell)[0]
+            else:
+                continue
+
+            try:
+                group_id = Groups.get(Groups.group == group_cell).group_id
+            except DoesNotExist:
+                g = Groups.create(group=group_cell)
+                group_id = g.group_id
+
+            try:
+                has_url = str(sheet.cell(1, col_index + 3).value).strip(".…, \n") == "Ссылка"
+            except IndexError:  # Sometimes gives 'array index out of range'...
+                has_url = False
+
+            row_index = 2
+            while (month := sub(r"\W+", "", Parser._get_cell_info(row_index, 0, sheet))) != "":
+                month_date = date_parse(month)
+                if month_date is None:
+                    print(Fore.RED + f"Дата месяца '{month}' не была распарсена! Скипаем ряд..." + Style.RESET_ALL)
+                    continue
+                day_match = search(r"^\d{2}", Parser._get_cell_info(row_index, 1, sheet))
+                if day_match is None:
+                    print(Fore.RED + f"Дата дня '{Parser._get_cell_info(row_index, 1, sheet)}' "
+                                     "не была найдена! Скипаем ряд..." + Style.RESET_ALL)
+                    continue
+                day_date = month_date.replace(day=int(day_match.group(0))).date()
+
+                # Find whether day is 1-row or 3-row
+                one_row_cell = Parser._get_merged_cell_info(row_index, 1, sheet)[0] is None
+
+                discipline = ""
+                discipline_type = ""
+                discipline_time = None
+                discipline_time_end = None
+                examiner = ""
+                class_number = ""
+                link = ""
+                if not one_row_cell:
+                    flipped_time_with_classroom = False
+                    if search(r"(?i).*прием.*задолженност.*", Parser._get_cell_info(row_index, col_index, sheet)):
+                        discipline = Parser._get_cell_info(row_index, col_index, sheet)
+                        discipline_time = time(9, 0)
+                        discipline_time_end = time(18, 0)
+                    else:
+                        discipline_type = Parser._get_cell_info(row_index, col_index, sheet)
+                        d_time = Parser._get_cell_info(row_index, col_index + 1, sheet)
+                        if len(d_time) > 0:
+                            for _ in range(2):
+                                if match := search(
+                                        r"(?P<start_1>\d{1,2})\D(?P<start_2>\d{1,2})\D*(?P<end_1>\d{1,2})\D(?P<end_2>\d{1,2})",
+                                        d_time
+                                ):
+                                    discipline_time = time(*map(int, [match.group("start_1"), match.group("start_2")]))
+                                    discipline_time_end = time(*map(int, [match.group("end_1"), match.group("end_2")]))
+                                    break
+                                elif match_s := search(r"(?P<start_1>\d{1,2})\D(?P<start_2>\d{1,2})", d_time):
+                                    discipline_time = time(*map(int, [match_s.group("start_1"),
+                                                                      match_s.group("start_2")]))
+                                    break
+                                else:
+                                    # Try different cell...
+                                    if not flipped_time_with_classroom:
+                                        class_number = d_time
+                                        d_time = Parser._get_cell_info(row_index, col_index + 2, sheet)
+                                        flipped_time_with_classroom = True
+                                        continue
+                                    print(Fore.RED + f"Не распарсена дата '{d_time}'! Ставим 00:00 :) "
+                                                     f"Ряд - {row_index}, колонка - {col_index + 1}!" + Style.RESET_ALL)
+                                    discipline_time = time(0, 0)
+                        else:
+                            discipline_time = None
+                        discipline = Parser._get_cell_info(row_index + 1, col_index, sheet)
+                        examiner = Parser._get_cell_info(row_index + 2, col_index, sheet)
+                        if not flipped_time_with_classroom:
+                            class_number = Parser._get_cell_info(row_index, col_index + 2, sheet)
+                        if has_url:
+                            link = Parser._get_cell_info(row_index, col_index + 3, sheet)
+                    row_index += 3
+                else:
+                    row_index += 1
+
+                if len([i for i in ExamDays.select().where(
+                        (ExamDays.group_id == group_id) &
+                        (ExamDays.day_date == day_date)).limit(1).execute()]) == 0:
+                    ExamDays.create(
+                        group_id=group_id,
+                        day_date=day_date,
+                        discipline_id=discipline_count + 1
+                    )
+                    discipline_count += 1
+                    discipline_id = discipline_count
+                else:
+                    discipline_id = ExamDays.get((ExamDays.group_id == group_id) &
+                                                 (ExamDays.day_date == day_date)).discipline_id
+
+                if len([i for i in Disciplines.select()
+                        .where(Disciplines.discipline_id == discipline_id).limit(1).execute()]) == 0:
+                    # print("Создаём " +
+                    #       ', '.join([str(discipline_time), discipline, discipline_type, examiner, class_number, link])
+                    #       + f" в discipline_id {str(discipline_id)}")
+                    Disciplines.create(
+                        discipline_id=discipline_id,
+                        discipline=discipline,
+                        discipline_type=discipline_type,
+                        discipline_time=discipline_time,
+                        discipline_time_end=discipline_time_end,
+                        examiner=examiner,
+                        class_number=class_number,
+                        link=link
+                    )
+                else:
+                    d: Disciplines = Disciplines.get(Disciplines.discipline_id == discipline_id)
+                    if d.discipline != discipline or d.discipline_type != discipline_type or \
+                            d.discipline_time != discipline_time or d.discipline_time_end != discipline_time_end or \
+                            d.examiner != examiner or d.class_number != class_number or d.link != link:
+                        # print(f"Обновляем " +
+                        #       ', '.join(
+                        #           [str(discipline_time), discipline, discipline_type, examiner, class_number, link])
+                        #       + " в discipline_id {str(discipline_id)}")
+                        d.discipline = discipline
+                        d.discipline_type = discipline_type
+                        d.discipline_time = discipline_time
+                        d.discipline_time_end = discipline_time_end
+                        d.examiner = examiner
+                        d.class_number = class_number
+                        d.link = link
+                        d.save()
+
+                pass
+            pass
 
     @staticmethod
     def _fill_lesson_start_end_table(lesson_number: int, start_time: time, end_time: time) -> None:
@@ -411,12 +602,32 @@ class Parser:
             лист для поиска
         """
         cell = sub(r"[\t ]*\n+[\t ]*", "\n", str(sheet.cell(row_index, col_index).value).strip(".…, \n"))
+        cell = sub(r"\W{2,}", " ", cell)
         if cell == "":
             for crange in sheet.merged_cells:
                 rlo, rhi, clo, chi = crange
                 if rlo <= row_index < rhi and clo <= col_index < chi:
-                    return sub(r"[\t ]*\n+[\t ]*", "\n", str(sheet.cell(rlo, clo).value).strip(".…, \n"))
+                    c_cell = sub(r"[\t ]*\n+[\t ]*", "\n", str(sheet.cell(rlo, clo).value).strip(".…, \n"))
+                    return sub(r"\W{2,}", " ", c_cell)
         return cell
+
+    @staticmethod
+    def _get_merged_cell_info(row_index, col_index, sheet):
+        """Получение информации из совмещённой ячейки
+        Parameters
+        ----------
+        row_index: int
+            номер ряда
+        col_index: int
+            номер колонки
+        sheet: Sheet
+            лист для поиска
+        """
+        for crange in sheet.merged_cells:
+            rlo, rhi, clo, chi = crange
+            if rlo <= row_index < rhi and clo <= col_index < chi:
+                return rhi - rlo, chi - clo
+        return None, None
 
     @staticmethod
     def _get_number_of_lessons(row_index, col_index, sheet) -> int:

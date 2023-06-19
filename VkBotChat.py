@@ -14,7 +14,7 @@ from vk_api.keyboard import VkKeyboard
 from vk_api.utils import get_random_id
 
 from InitConfig import Config
-from MySQLStorage import Users_groups, Weeks, Users_tasks
+from MySQLStorage import Users_groups, Users_tasks, Groups
 from VkBotFunctions import VkBotFunctions
 from VkBotParser import Parser
 from VkBotStatus import States, VkBotStatus
@@ -72,7 +72,7 @@ class VkBotChat:
                                           '\nПример формы записи группы: ИКБО-03-19.')
 
             elif search(r'([а-я]{4}-\d{2}-\d{2})', user_message):
-                if len([i for i in Weeks.select().where(Weeks.group == user_message.upper()).execute()]) > 0:
+                if len([i for i in Groups.select().where(Groups.group == user_message.upper()).execute()]) > 0:
                     if len([i for i in
                             Users_groups.select().where(Users_groups.user_id == self._user_id).execute()]) != 0:
                         Users_groups.update(group=user_message.upper()).where(

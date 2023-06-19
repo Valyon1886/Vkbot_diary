@@ -16,7 +16,9 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from InitConfig import Config
 from InitDatabase import InitDatabase
 from InitSQL import InitSQL
-from MySQLStorage import Weeks, Days, Subjects, Users_groups, Users_tasks, Lesson_start_end, Users_communities
+from MySQLStorage import (
+    Weeks, Days, Subjects, Users_groups, Users_tasks, Lesson_start_end, Users_communities, Groups, ExamDays, Disciplines
+)
 from SpeechRecognizer import SpeechRecognizer
 from VkBotChat import VkBotChat
 from VkBotParser import Parser
@@ -31,7 +33,7 @@ from VkBotParser import Parser
 
 def ensure_tables_created() -> None:
     """Проверка, что таблицы созданы"""
-    InitSQL.get_DB().create_tables([Weeks, Days, Subjects, Users_groups,
+    InitSQL.get_DB().create_tables([Groups, Weeks, Days, Subjects, ExamDays, Disciplines, Users_groups,
                                     Users_tasks, Lesson_start_end, Users_communities])
 
 
@@ -71,6 +73,7 @@ def parse_unanswered_messages(vk_session: VkApi) -> List[dict]:
     while conv_count > 200:
         conversations_items.extend(vk.messages.getConversations(count=200, filter="unanswered", offset=offset))
         offset += 200
+        conv_count -= 200
     return [i['last_message'] for i in conversations_items if i.get("last_message", None) is not None]
 
 

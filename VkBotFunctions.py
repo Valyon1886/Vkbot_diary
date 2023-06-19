@@ -7,7 +7,9 @@ from peewee import DoesNotExist
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
 from InitConfig import Config
-from MySQLStorage import Users_communities, Weeks, Days, Subjects, Lesson_start_end, Users_tasks
+from MySQLStorage import (
+    Users_communities, Weeks, Days, Subjects, Lesson_start_end, Users_tasks, Groups, ExamDays, Disciplines
+)
 from VkBotStatus import States, VkBotStatus
 
 
@@ -300,6 +302,12 @@ class VkBotFunctions:
             weeks: List[Weeks] = [i for i in Weeks.select().where(
                 (Weeks.days_of_group_id.in_(sch_ids)) & (Weeks.even == even_week)).execute()]
 
+            group_ids = set(i.group_id for i in weeks)
+
+            groups_dict = {}
+            for g in Groups.select().where(Groups.group_id.in_(group_ids)).execute():
+                groups_dict[g.group_id] = g.group
+
             weeks_ids = set(i.days_of_group_id for i in weeks)
 
             schedules_of_day = sorted(
@@ -324,7 +332,7 @@ class VkBotFunctions:
                     full_sentence += "\n\n▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣▣\n"
                 week_day = schedules_of_days[i][0].day_of_week
                 full_sentence += f'\n{week_day} (' + (
-                            day_date + timedelta(days=self._week_days.index(week_day))
+                        day_date + timedelta(days=self._week_days.index(week_day))
                 ).strftime("%d.%m.%Y") + '):\n'
                 subj_ids_from_days = [d.subject_schedules_of_day_id for d in schedules_of_days[i]]
 
@@ -336,7 +344,7 @@ class VkBotFunctions:
                             break
                     if cur_day is None:
                         return s, None
-                    group = [w.group for w in weeks if w.days_of_group_id == cur_day.day_of_week_id]
+                    group = [groups_dict[w.group_id] for w in weeks if w.days_of_group_id == cur_day.day_of_week_id]
                     return s, group
 
                 subj_day = []
@@ -414,22 +422,27 @@ class VkBotFunctions:
         even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
         dates_of_tasks = self.get_user_tasks_on_day(day_date)
 
-        if len(list(Weeks.select().where(Weeks.group == group).limit(1).execute())) == 0:
+        if len(list(Groups.select().where(Groups.group == group).limit(1).execute())) == 0:
             return f"Для этой группы \"{group}\" нет расписания!"
 
+        group_id = Groups.get(Groups.group == group).group_id
+        if len(list(Weeks.select().where((Weeks.group_id == group_id) &
+                                         (Weeks.even == even_week)).limit(1).execute())) == 0 and \
+                len(list(ExamDays.select().where((ExamDays.group_id == group_id) &
+                                                 (ExamDays.day_date == day_date.date())).limit(1).execute())) == 0:
+            return ""
+
+        # Usual schedule
         try:
-            day_of_group_id = Weeks.get((Weeks.group == group) & (Weeks.even == even_week)).days_of_group_id
+            day_of_group_id = Weeks.get((Weeks.group_id == group_id) & (Weeks.even == even_week)).days_of_group_id
 
             schedules_of_day = Days.get(
                 (Days.day_of_week_id == day_of_group_id) & (Days.day_of_week == week_day)).subject_schedules_of_day_id
 
             subjects = [i for i in
                         Subjects.select().where(Subjects.schedule_of_subject_id == schedules_of_day).execute()]
-            if len(subjects) == 0:
-                raise DoesNotExist
         except DoesNotExist:
             subjects = []
-            full_sentence += "Данные по расписанию не доступны\n"
 
         week_number = VkBotFunctions._get_number_week(day_date)
         full_list = []
@@ -468,6 +481,38 @@ class VkBotFunctions:
                 if is_place_empty:
                     full_list.append([lesson_start_time, lesson_end_time, i.subject, i.lesson_number,
                                       i.lesson_type, i.teacher, i.class_number, i.link])
+
+        # Exam schedule
+        try:
+            discipline_id = ExamDays.get((ExamDays.group_id == group_id) &
+                                         (ExamDays.day_date == day_date.date())).discipline_id
+
+            disciplines: List[Disciplines] = [i for i in Disciplines.select().where(Disciplines.discipline_id == discipline_id).execute()]
+        except DoesNotExist:
+            disciplines = []
+
+        for i in disciplines:
+            if i.discipline:
+                lesson_start_time = i.discipline_time
+                lesson_end_time = i.discipline_time_end
+                is_place_empty = True
+                if lesson_end_time is None:
+                    for j in task_list:
+                        if j[0] < lesson_start_time < j[1] or j[0] > lesson_start_time < j[1] or\
+                                j[0] == lesson_start_time:
+                            is_place_empty = False
+                            break
+                else:
+                    for j in task_list:
+                        if (j[0] < lesson_start_time < j[1]) or (j[0] < lesson_end_time < j[1]) or \
+                                (j[0] > lesson_start_time < j[1] < lesson_end_time > j[0]) or \
+                                (j[0] == lesson_start_time and j[1] == lesson_end_time):
+                            is_place_empty = False
+                            break
+                if is_place_empty:
+                    full_list.append([lesson_start_time, lesson_end_time, i.discipline, None,
+                                      i.discipline_type, i.examiner, i.class_number, i.link])
+
         full_list.extend(task_list)
         full_list.sort(key=lambda x: x[0])
 
@@ -475,13 +520,14 @@ class VkBotFunctions:
             if sbj_tsk != 0:
                 full_sentence += f"{space * 2}------------------------------\n"
             full_sentence += space * 2
-            if len(full_list[sbj_tsk]) > 3:
+            if len(full_list[sbj_tsk]) > 3 and full_list[sbj_tsk][3] is not None:
                 full_sentence += f"{full_list[sbj_tsk][3]} пара: с "
             else:
                 full_sentence += "С "
-            full_sentence += f"{full_list[sbj_tsk][0].strftime('%H:%M')} " \
-                             f"по {full_list[sbj_tsk][1].strftime('%H:%M')}" \
-                             f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
+            full_sentence += f"{full_list[sbj_tsk][0].strftime('%H:%M')}"
+            if full_list[sbj_tsk][1] is not None:
+                full_sentence += f" по {full_list[sbj_tsk][1].strftime('%H:%M')}"
+            full_sentence += f"\n{space * 4}{full_list[sbj_tsk][2].replace(new_line, f'{new_line}{space * 4}')}"
             if len(full_list[sbj_tsk]) > 3:
                 if full_list[sbj_tsk][4]:
                     type_subj_l = full_list[sbj_tsk][4].split(new_line)

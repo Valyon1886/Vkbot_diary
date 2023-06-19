@@ -38,13 +38,47 @@ class Days(BaseModel):
 class Weeks(BaseModel):
     """Таблица id дней для выбранной группы и нечётной/чётной недели"""
     week_id = AutoField(column_name='WeekId')
-    group = TextField(column_name='Group')
+    group_id = IntegerField(column_name='GroupId')
     even = BooleanField(column_name='Even')
     # day_lesson = ForeignKeyField(Days, to_field='day_lesson_id')
     days_of_group_id = IntegerField(column_name='DaysOfGroupId')
 
     class Meta:
         table_name = 'Weeks'
+
+
+class Groups(BaseModel):
+    """Таблица групп"""
+    group_id = AutoField(column_name='GroupId')
+    group = TextField(column_name='Group')
+
+    class Meta:
+        table_name = 'Groups'
+
+
+class Disciplines(BaseModel):
+    """Таблица информации о каждой дисциплине в экзаменационном расписании"""
+    discipline_id = IntegerField(column_name='DisciplineId')
+    discipline = TextField(column_name='Discipline')
+    discipline_type = TextField(column_name='DisciplineType')
+    discipline_time = TimeField(column_name='DisciplineTime', null=True)
+    discipline_time_end = TimeField(column_name='DisciplineTimeEnd', null=True)
+    examiner = TextField(column_name='Examiner')
+    class_number = TextField(column_name='ClassNumber')
+    link = TextField(column_name='Link')
+
+    class Meta:
+        table_name = 'Disciplines'
+
+
+class ExamDays(BaseModel):
+    """Таблица id дисциплин для экзаменационных дней"""
+    group_id = IntegerField(column_name='GroupId')
+    day_date = DateField(column_name='DayDate')
+    discipline_id = IntegerField(column_name='DisciplineId')
+
+    class Meta:
+        table_name = 'ExamDays'
 
 
 class Users_groups(BaseModel):

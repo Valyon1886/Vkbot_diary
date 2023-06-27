@@ -453,7 +453,7 @@ class Parser:
                 if month_date is None:
                     print(Fore.RED + f"Дата месяца '{month}' не была распарсена! Скипаем ряд..." + Style.RESET_ALL)
                     continue
-                day_match = search(r"^\d{2}", Parser._get_cell_info(row_index, 1, sheet))
+                day_match = search(r"^\d{1,2}", Parser._get_cell_info(row_index, 1, sheet))
                 if day_match is None:
                     print(Fore.RED + f"Дата дня '{Parser._get_cell_info(row_index, 1, sheet)}' "
                                      "не была найдена! Скипаем ряд..." + Style.RESET_ALL)
@@ -482,15 +482,18 @@ class Parser:
                         if len(d_time) > 0:
                             for _ in range(2):
                                 if match := search(
-                                        r"(?P<start_1>\d{1,2})\D(?P<start_2>\d{1,2})\D*(?P<end_1>\d{1,2})\D(?P<end_2>\d{1,2})",
+                                        r"(?P<start_hour>\d{1,2})\D(?P<start_minute>\d{1,2})\D+"
+                                        r"(?P<end_hour>\d{1,2})\D(?P<end_minute>\d{1,2})",
                                         d_time
                                 ):
-                                    discipline_time = time(*map(int, [match.group("start_1"), match.group("start_2")]))
-                                    discipline_time_end = time(*map(int, [match.group("end_1"), match.group("end_2")]))
+                                    discipline_time = time(*map(int, [match.group("start_hour"),
+                                                                      match.group("start_minute")]))
+                                    discipline_time_end = time(*map(int, [match.group("end_hour"),
+                                                                          match.group("end_minute")]))
                                     break
-                                elif match_s := search(r"(?P<start_1>\d{1,2})\D(?P<start_2>\d{1,2})", d_time):
-                                    discipline_time = time(*map(int, [match_s.group("start_1"),
-                                                                      match_s.group("start_2")]))
+                                elif match_s := search(r"(?P<start_hour>\d{1,2})\D(?P<start_minute>\d{1,2})", d_time):
+                                    discipline_time = time(*map(int, [match_s.group("start_hour"),
+                                                                      match_s.group("start_minute")]))
                                     break
                                 else:
                                     # Try different cell...
@@ -560,9 +563,6 @@ class Parser:
                         d.class_number = class_number
                         d.link = link
                         d.save()
-
-                pass
-            pass
 
     @staticmethod
     def _fill_lesson_start_end_table(lesson_number: int, start_time: time, end_time: time) -> None:

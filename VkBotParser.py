@@ -97,7 +97,7 @@ class Parser:
             page = get("https://www.mirea.ru/schedule/")
             soup = BeautifulSoup(page.text, "html.parser")
             uni_names = soup.find("div", {"class": "schedule"}).find_all("a", {"class": "uk-text-bold"})
-            uni_names = list(set([i.contents[0] for i in uni_names]))
+            uni_names = list(set([sub(r"\n\s{2,}", " ", i.contents[0]) for i in uni_names]))
             with suppress(ValueError):
                 uni_names.remove("Филиал в городе Ставрополе")
             for name in uni_names:
@@ -105,10 +105,7 @@ class Parser:
                 nav_links = soup.find("div", {"class": "schedule"}).findAll(string=name)
                 for link in nav_links:
                     links.extend(
-                        link.
-                        find_parent("div").
-                        find_parent("div").
-                        findAll("a", {"class": "uk-link-toggle"})
+                        link.find_parent("div").find_parent("div").findAll("a", {"class": "uk-link-toggle"})
                     )
                 links = [link["href"] for link in links]
                 if len(links) > 0:
@@ -137,11 +134,11 @@ class Parser:
             InitSQL.get_DB().drop_tables([Groups, Weeks, Days, Subjects, ExamDays, Disciplines, Lesson_start_end])
             InitSQL.get_DB().create_tables([Groups, Weeks, Days, Subjects, ExamDays, Disciplines, Lesson_start_end])
 
-        # any(s in x.lower() for s in ["zach_", "_zachety"])
-        # all(s not in x.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"])
+        # any(s in l.lower() for s in ["zach_", "_zachety"])
+        # all(s not in l.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"])
         result_links = [
             l for l in result_links
-            if any(s in l.lower() for s in ["_ekzameny", "ekz_"]) and search(r"\d([-_])?(kurs|k)[^/]*\.xls", l.lower())
+            if all(s not in l.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"]) and search(r"\d([-_])?(kurs|k)[^/]*\.xls", l.lower())
         ]
 
         parsed_tables = 0

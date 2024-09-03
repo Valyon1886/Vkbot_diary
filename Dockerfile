@@ -1,4 +1,4 @@
-FROM python:3.8.17-slim
+FROM python:3.8.19-slim
 
 # copy bot files and its requirements
 WORKDIR /VkBotDiary/

@@ -3,6 +3,7 @@ from random import randint, choice
 from re import findall, sub, IGNORECASE, search
 from typing import Tuple, List, Optional, Set
 
+from colorama import Fore, Style
 from peewee import DoesNotExist
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 
@@ -133,7 +134,9 @@ class VkBotFunctions:
                     if list_of_named_buttons is None:
                         keyboard.add_button(str(i + 1))
                     else:
-                        keyboard.add_button(list_of_named_buttons[i])
+                        if len(list_of_named_buttons[i]) > 40:
+                            print(Fore.LIGHTRED_EX + f"Название кнопки '{list_of_named_buttons[i]}' длиннее 40 символов!" + Style.RESET_ALL)
+                        keyboard.add_button(list_of_named_buttons[i][:40])
                     if ((i + 1) % buttons_in_row == 0 and i != 0) or i + 1 == buttons or buttons_in_row == 1:
                         keyboard.add_line()
             keyboard.add_button('Отмена', color=VkKeyboardColor.NEGATIVE)

@@ -134,8 +134,9 @@ class Parser:
             InitSQL.get_DB().drop_tables([Groups, Weeks, Days, Subjects, ExamDays, Disciplines, Lesson_start_end])
             InitSQL.get_DB().create_tables([Groups, Weeks, Days, Subjects, ExamDays, Disciplines, Lesson_start_end])
 
-        # any(s in l.lower() for s in ["zach_", "_zachety"])
         # all(s not in l.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"])
+        # any(s in l.lower() for s in ["zach_", "_zachety"])
+        # any(s in l.lower() for s in ["_ekzameny", "ekz_"])
         result_links = [
             l for l in result_links
             if all(s not in l.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"]) and search(r"\d([-_])?(kurs|k)[^/]*\.xls", l.lower())
@@ -599,13 +600,13 @@ class Parser:
             лист для поиска
         """
         cell = sub(r"[\t ]*\n+[\t ]*", "\n", str(sheet.cell(row_index, col_index).value).strip(".…, \n"))
-        cell = sub(r"\W{2,}", " ", cell)
+        cell = sub(r"[^\S\r\n]{2,}", " ", cell)
         if cell == "":
             for crange in sheet.merged_cells:
                 rlo, rhi, clo, chi = crange
                 if rlo <= row_index < rhi and clo <= col_index < chi:
                     c_cell = sub(r"[\t ]*\n+[\t ]*", "\n", str(sheet.cell(rlo, clo).value).strip(".…, \n"))
-                    return sub(r"\W{2,}", " ", c_cell)
+                    return sub(r"[^\S\r\n]{2,}", " ", c_cell)
         return cell
 
     @staticmethod

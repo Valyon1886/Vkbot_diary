@@ -44,12 +44,20 @@ def checking_schedule_on_changes() -> None:
         all_files_parsed = True
         if Config.get_weeks_info()["start_week"] <= datetime.now() <= Config.get_weeks_info()["pre_exam_week"]:
             print(Fore.MAGENTA + "Начинаем парсинг файлов расписания..." + Style.RESET_ALL)
-            all_files_parsed = Parser.download_schedules()
-            print(Fore.MAGENTA + "Парсинг файлов расписания завершён!" + Style.RESET_ALL)
+            try:
+                all_files_parsed = Parser.download_schedules()
+                print(Fore.MAGENTA + "Парсинг файлов расписания завершён!" + Style.RESET_ALL)
+            except BaseException:
+                print(
+                    Fore.LIGHTRED_EX + "Парсинг файлов расписания прерван ошибкой! Перезапускаем через некоторое время!"
+                    + Style.RESET_ALL
+                )
+                print_exc()
+                all_files_parsed = False
         else:
             print(Fore.MAGENTA + "Парсинг файлов расписания не произведён, т. к. семестр ещё не начался/уже закончился!"
                   + Style.RESET_ALL)
-        sleep(Config.get_await_time() if all_files_parsed else 600)
+        sleep(Config.get_await_time() if all_files_parsed else 300)
 
 
 def parse_unanswered_messages(vk_session: VkApi) -> List[dict]:

@@ -187,7 +187,6 @@ class Parser:
         Parser._lesson_times_parsed_for_table = False
         Parser._bot_parsing = False
         if len(files_parsed) - hashed_files > 0:
-            Parser._parsed_date = datetime.now()
             Config.set_last_parsed_date(Parser._parsed_date)
             Config.save_config()
         else:

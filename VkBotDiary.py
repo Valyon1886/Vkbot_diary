@@ -1,3 +1,4 @@
+import datetime as dt
 from contextlib import suppress
 from datetime import datetime
 from json import loads
@@ -42,10 +43,13 @@ def checking_schedule_on_changes() -> None:
     sleep(0.1)
     while True:
         all_files_parsed = True
+        skipped_time: dt.timedelta = dt.timedelta(seconds=0)
         if Config.get_weeks_info()["start_week"] <= datetime.now() <= Config.get_weeks_info()["pre_exam_week"]:
             print(Fore.MAGENTA + "Начинаем парсинг файлов расписания..." + Style.RESET_ALL)
             try:
+                started_time = datetime.now()
                 all_files_parsed = Parser.download_schedules()
+                skipped_time = started_time - datetime.now()
                 print(Fore.MAGENTA + "Парсинг файлов расписания завершён!" + Style.RESET_ALL)
             except BaseException:
                 print(
@@ -57,7 +61,13 @@ def checking_schedule_on_changes() -> None:
         else:
             print(Fore.MAGENTA + "Парсинг файлов расписания не произведён, т. к. семестр ещё не начался/уже закончился!"
                   + Style.RESET_ALL)
-        sleep(Config.get_await_time() if all_files_parsed else 300)
+
+        def round_p(num: int | float) -> int:
+            return int(num) if num > 0 else 0
+
+        sleep(round_p(
+            (Config.get_await_time() if all_files_parsed else 300) - round_p(skipped_time.total_seconds())
+        ))
 
 
 def parse_unanswered_messages(vk_session: VkApi) -> List[dict]:
@@ -130,7 +140,6 @@ def main() -> None:
         print(Fore.BLUE + "Бот залогинился!" + Style.RESET_ALL)
     except ApiError:
         exit("Ошибка! Неправильно введён токен для бота! Измените токен бота на правильный!")
-        return
     vk_session_user = None
     if Config.get_user_info():
         chdir(Config.get_dir_name())

@@ -348,8 +348,9 @@ class Parser:
                                             day_of_week=Parser._week_days[day],
                                             subject_schedules_of_day_id=day_count + 1)
                                 day_count += 1
+                                days_evenness[day] = {}
                                 days_evenness[day][bool(evenness)] = True
-                            if week_evenness[bool(evenness)] is not None:
+                            if week_evenness[bool(evenness)] is None:
                                 Weeks.create(group_id=group_id,
                                              even=bool(evenness),
                                              days_of_group_id=group_count + 1)

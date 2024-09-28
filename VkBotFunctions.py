@@ -287,6 +287,7 @@ class VkBotFunctions:
         """
         full_sentence = ""
         space = "&#8194;"
+        thin_space = "&#8201;"
         new_line = '\n'
         even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
 
@@ -387,7 +388,7 @@ class VkBotFunctions:
                                 all(all(i == audit_subj_l[j] for i in audit_subj_l) for j in range(len(audit_subj_l))):
                             full_sentence += f"\n{space * 4}Аудитория: {audit_subj_l[0]}"
                         else:
-                            full_sentence += f"\n{space * 4}Аудитории: {subj_day[subj][0].class_number.replace(new_line, ', ')}"
+                            full_sentence += f"\n{space * 4}Аудитории: {subj_day[subj][0].class_number.replace(new_line, f'{new_line}{space * 14} {thin_space}')}"
                     if subj_day[subj][1] is not None:
                         if len(subj_day[subj][1]) == 1:
                             full_sentence += f"\n{space * 4}Группа: {subj_day[subj][1][0]}"
@@ -421,6 +422,7 @@ class VkBotFunctions:
         """
         full_sentence = ""
         space = "&#8194;"
+        thin_space = "&#8201;"
         new_line = '\n'
         even_week = bool((self._get_number_week(datetime.now()) + int(next_week) + 1) % 2)
         dates_of_tasks = self.get_user_tasks_on_day(day_date)
@@ -549,7 +551,7 @@ class VkBotFunctions:
                             all(all(i == audit_subj_l[j] for i in audit_subj_l) for j in range(len(audit_subj_l))):
                         full_sentence += f"\n{space * 4}Аудитория: {audit_subj_l[0]}"
                     else:
-                        full_sentence += f"\n{space * 4}Аудитории: {full_list[sbj_tsk][6].replace(new_line, ', ')}"
+                        full_sentence += f"\n{space * 4}Аудитории: {full_list[sbj_tsk][6].replace(new_line, f'{new_line}{space * 14} {thin_space}')}"
                 if full_list[sbj_tsk][7]:
                     if len(full_list[sbj_tsk][7].split(new_line)) == 1:
                         full_sentence += f"\n{space * 4}Ссылка: {full_list[sbj_tsk][7]}"

@@ -49,7 +49,7 @@ def checking_schedule_on_changes() -> None:
             try:
                 started_time = datetime.now()
                 all_files_parsed = Parser.download_schedules()
-                skipped_time = started_time - datetime.now()
+                skipped_time = datetime.now() - started_time
                 print(Fore.MAGENTA + "Парсинг файлов расписания завершён!" + Style.RESET_ALL)
             except BaseException:
                 print(

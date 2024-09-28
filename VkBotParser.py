@@ -139,7 +139,8 @@ class Parser:
         # any(s in l.lower() for s in ["_ekzameny", "ekz_"])
         result_links = [
             l for l in result_links
-            if all(s not in l.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"]) and search(r"\d([-_])?(kurs|k)[^/]*\.xls", l.lower())
+            if all(s not in l.lower() for s in ["zach_", "_zachety", "_ekzameny", "ekz_"])
+               and search(r"\d([-_])?(kurs|k)[^/]*\.xls", l.lower())
         ]
 
         parsed_tables = 0
@@ -272,7 +273,6 @@ class Parser:
             if col_index % print_status_in == 0:
                 print(Fore.YELLOW + f"Прогресс: {int((col_index / num_cols) * 100)}%" + Style.RESET_ALL)
             group_cell = str(sheet.cell(1, col_index).value)
-            group_created = False
             if search(r'.{4}-\d{2}-\d{2}', group_cell):
                 group_cell = findall(r'.{4}-\d{2}-\d{2}', group_cell)[0]
             else:
@@ -283,7 +283,6 @@ class Parser:
             except DoesNotExist:
                 g = Groups.create(group=group_cell)
                 group_id = g.group_id
-                group_created = True
 
             try:
                 has_url = str(sheet.cell(2, col_index + 4).value).strip(".…, \n") == "Ссылка"
@@ -292,18 +291,16 @@ class Parser:
 
             skip_to_curr_day = 0
             lesson_numbers_parsed = []
-            week_evenness = {
-                True: None,
-                False: None
-            }
-            days_evenness = {}
 
             for day in range(6):
                 number_of_lessons = Parser._get_number_of_lessons(3 + skip_to_curr_day, 0, sheet)
                 for lesson in range(number_of_lessons):
                     for evenness in range(2):
-                        lesson_number = int(float(Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
-                                                                        start_offset + 1, sheet)))
+                        try:
+                            lesson_number = int(float(Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
+                                                                            start_offset + 1, sheet)))
+                        except ValueError:
+                            lesson_number = lesson + 1
                         if not Parser._lesson_times_parsed_for_table and lesson_number not in lesson_numbers_parsed:
                             lesson_numbers_parsed.append(lesson_number)
                             lesson_start_time = Parser._get_cell_info(3 + lesson * 2 + skip_to_curr_day,
@@ -334,29 +331,6 @@ class Parser:
                             if lesson == 0 and day == 0 else (group_count - int(not bool(evenness)))
                         schedule_of_subject_id = (day_count + 1) \
                             if lesson == 0 else (day_count - int(not bool(evenness)))
-
-                        if group_created:
-                            Subjects.create(schedule_of_subject_id=schedule_of_subject_id,
-                                            lesson_number=lesson_number,
-                                            subject=subject,
-                                            lesson_type=lesson_type,
-                                            teacher=lecturer,
-                                            class_number=classroom,
-                                            link=url)
-                            if days_evenness.get(day, None) is None or days_evenness.get(day, {}).get(bool(evenness), None) is None:
-                                Days.create(day_of_week_id=day_of_week_id,
-                                            day_of_week=Parser._week_days[day],
-                                            subject_schedules_of_day_id=day_count + 1)
-                                day_count += 1
-                                days_evenness[day] = {}
-                                days_evenness[day][bool(evenness)] = True
-                            if week_evenness[bool(evenness)] is None:
-                                Weeks.create(group_id=group_id,
-                                             even=bool(evenness),
-                                             days_of_group_id=group_count + 1)
-                                group_count += 1
-                                week_evenness[bool(evenness)] = True
-                            continue
 
                         # Check if subject exists
                         query = (

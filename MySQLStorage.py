@@ -12,6 +12,7 @@ class BaseModel(Model):
 
 class Subjects(BaseModel):
     """Таблица информации о каждой паре"""
+    id = AutoField(primary_key=True)
     schedule_of_subject_id = IntegerField(column_name='ScheduleOfSubjectId')
     lesson_number = IntegerField(column_name='LessonNumber')
     subject = TextField(column_name='Subject')
@@ -26,6 +27,7 @@ class Subjects(BaseModel):
 
 class Days(BaseModel):
     """Таблица id пар для дней"""
+    id = AutoField(primary_key=True)
     day_of_week_id = IntegerField(column_name='DayOfWeekId')
     day_of_week = TextField(column_name='DayOfWeek')
     # schedule_of_subject = ForeignKeyField(Subjects, to_field='schedule_id')

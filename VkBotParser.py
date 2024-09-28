@@ -268,21 +268,11 @@ class Parser:
         if day_max_count is not None and day_max_count > 0:
             day_count = day_max_count
 
-        existing_records = [
-            {
-                "day_id": None,
-                "subject_id": None
-            },
-            {
-                "day_id": None,
-                "subject_id": None
-            }
-        ]
-
         for col_index in range(num_cols):
             if col_index % print_status_in == 0:
                 print(Fore.YELLOW + f"Прогресс: {int((col_index / num_cols) * 100)}%" + Style.RESET_ALL)
             group_cell = str(sheet.cell(1, col_index).value)
+            group_created = False
             if search(r'.{4}-\d{2}-\d{2}', group_cell):
                 group_cell = findall(r'.{4}-\d{2}-\d{2}', group_cell)[0]
             else:
@@ -293,6 +283,7 @@ class Parser:
             except DoesNotExist:
                 g = Groups.create(group=group_cell)
                 group_id = g.group_id
+                group_created = True
 
             try:
                 has_url = str(sheet.cell(2, col_index + 4).value).strip(".…, \n") == "Ссылка"
@@ -301,6 +292,11 @@ class Parser:
 
             skip_to_curr_day = 0
             lesson_numbers_parsed = []
+            week_evenness = {
+                True: None,
+                False: None
+            }
+            days_evenness = {}
 
             for day in range(6):
                 number_of_lessons = Parser._get_number_of_lessons(3 + skip_to_curr_day, 0, sheet)
@@ -339,28 +335,7 @@ class Parser:
                         schedule_of_subject_id = (day_count + 1) \
                             if lesson == 0 else (day_count - int(not bool(evenness)))
 
-                        try:
-                            if group_id is None:
-                                raise DoesNotExist()
-                            day_id = Weeks.get(
-                                (Weeks.group_id == group_id) & (Weeks.even == bool(evenness))).days_of_group_id
-                            existing_records[evenness]["day_id"] = day_id
-                        except DoesNotExist:
-                            existing_records[evenness]["day_id"] = None
-
-                        try:
-                            subject_id = Days.get((Days.day_of_week_id == existing_records[evenness]["day_id"]) & (
-                                    Days.day_of_week == Parser._week_days[day])).subject_schedules_of_day_id
-                            existing_records[evenness]["subject_id"] = subject_id
-                        except DoesNotExist:
-                            existing_records[evenness]["subject_id"] = None
-
-                        if len([i for i in Subjects.select().where(
-                                (Subjects.schedule_of_subject_id == existing_records[evenness]["subject_id"]) &
-                                (Subjects.lesson_number == lesson_number)).limit(1).execute()]) == 0:
-                            # print("Создаём " +
-                            #       ', '.join([str(lesson_number), subject, lesson_type, lecturer, classroom, url])
-                            #       + f" в subject_id {str(schedule_of_subject_id)}")
+                        if group_created:
                             Subjects.create(schedule_of_subject_id=schedule_of_subject_id,
                                             lesson_number=lesson_number,
                                             subject=subject,
@@ -368,10 +343,39 @@ class Parser:
                                             teacher=lecturer,
                                             class_number=classroom,
                                             link=url)
-                        else:
-                            s = Subjects.get(
-                                (Subjects.schedule_of_subject_id == existing_records[evenness]["subject_id"]) &
-                                (Subjects.lesson_number == lesson_number))
+                            if days_evenness.get(day, None) is None or days_evenness.get(day, {}).get(bool(evenness), None) is None:
+                                Days.create(day_of_week_id=day_of_week_id,
+                                            day_of_week=Parser._week_days[day],
+                                            subject_schedules_of_day_id=day_count + 1)
+                                day_count += 1
+                                days_evenness[day][bool(evenness)] = True
+                            if week_evenness[bool(evenness)] is not None:
+                                Weeks.create(group_id=group_id,
+                                             even=bool(evenness),
+                                             days_of_group_id=group_count + 1)
+                                group_count += 1
+                                week_evenness[bool(evenness)] = True
+                            continue
+
+                        # Check if subject exists
+                        query = (
+                            Weeks
+                            .select(Subjects)
+                            .join(Days, on=(Days.day_of_week_id == Weeks.days_of_group_id))
+                            .join(Subjects, on=(Subjects.schedule_of_subject_id == Days.subject_schedules_of_day_id))
+                            .where(
+                                (Weeks.group_id == group_id) &
+                                (Weeks.even == bool(evenness)) &
+                                (Days.day_of_week == Parser._week_days[day]) &
+                                (Subjects.lesson_number == lesson_number)
+                            )
+                            .limit(1)
+                        )
+                        query_list = list(query.execute())
+                        if len(query_list) > 0:
+                            s = query_list.pop()
+                            s: Subjects = s.days.subjects
+                            # Found existing
                             if s.subject != subject or s.lesson_type != lesson_type or s.teacher != lecturer or \
                                     s.class_number != classroom or s.link != url:
                                 # print(f"Обновляем " +
@@ -384,21 +388,49 @@ class Parser:
                                 s.class_number = classroom
                                 s.link = url
                                 s.save()
+                            continue
+                        else:
+                            Subjects.create(schedule_of_subject_id=schedule_of_subject_id,
+                                            lesson_number=lesson_number,
+                                            subject=subject,
+                                            lesson_type=lesson_type,
+                                            teacher=lecturer,
+                                            class_number=classroom,
+                                            link=url)
 
-                        if len([i for i in Days.select().where(
-                                (Days.day_of_week_id == existing_records[evenness]["day_id"]) &
-                                (Days.day_of_week == Parser._week_days[day])).limit(1).execute()]) == 0:
-                            if len([i for i in Days.select().where(
-                                    (Days.day_of_week_id == day_of_week_id) &
-                                    (Days.day_of_week == Parser._week_days[day])).limit(1).execute()]) == 0:
-                                Days.create(day_of_week_id=day_of_week_id,
-                                            day_of_week=Parser._week_days[day],
-                                            subject_schedules_of_day_id=day_count + 1)
-                                day_count += 1
-
-                        if len([i for i in Weeks.select().where(
+                        # Check if day exists
+                        query = (
+                            Weeks
+                            .select(Days.id)
+                            .join(Days, on=(Days.day_of_week_id == Weeks.days_of_group_id))
+                            .where(
                                 (Weeks.group_id == group_id) &
-                                (Weeks.even == bool(evenness))).limit(1).execute()]) == 0:
+                                (Weeks.even == bool(evenness)) &
+                                (Days.day_of_week == Parser._week_days[day])
+                            )
+                            .limit(1)
+                        )
+                        query_list = list(query.execute())
+                        if len(query_list) > 0:
+                            continue
+                        else:
+                            Days.create(day_of_week_id=day_of_week_id,
+                                        day_of_week=Parser._week_days[day],
+                                        subject_schedules_of_day_id=day_count + 1)
+                            day_count += 1
+
+                        # Check if week exists
+                        query = (
+                            Weeks
+                            .select(Weeks.week_id)
+                            .where(
+                                (Weeks.group_id == group_id) &
+                                (Weeks.even == bool(evenness))
+                            )
+                            .limit(1)
+                        )
+                        query_list = list(query.execute())
+                        if len(query_list) == 0:
                             Weeks.create(group_id=group_id,
                                          even=bool(evenness),
                                          days_of_group_id=group_count + 1)

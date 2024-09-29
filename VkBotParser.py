@@ -143,6 +143,10 @@ class Parser:
                and search(r"\d([-_])?(kurs|k)[^/]*\.xls", l.lower())
         ]
 
+        seen = set()
+        result_links = [x for x in result_links if x.split('/')[-1] not in seen and not seen.add(x.split('/')[-1])]
+        del seen
+
         parsed_tables = 0
         tables_count = len(result_links)
 

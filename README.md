@@ -123,7 +123,7 @@ version: '3.6'
 
 services:
   db:
-    image: mysql:8.0.23
+    image: mysql:8.0.39
     container_name: db
     restart: always
     environment:

@@ -264,7 +264,7 @@ class Parser:
         num_cols = sheet.ncols
         group_count = -1
         day_count = -1
-        print_status_in = num_cols // 15
+        print_status_in = num_cols // 5
 
         group_max_count = Weeks.select(fn.MAX(Weeks.days_of_group_id)).scalar()
         if group_max_count is not None and group_max_count > 0:
@@ -428,7 +428,7 @@ class Parser:
             лист из таблицы
         """
         num_cols = sheet.ncols
-        print_status_in = num_cols // 15
+        print_status_in = num_cols // 5
         discipline_count = -1
 
         discipline_max_count = Disciplines.select(fn.MAX(Disciplines.discipline_id)).scalar()

@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timedelta
 from random import randint, choice
 from re import findall, sub, IGNORECASE, search
@@ -11,6 +12,7 @@ from InitConfig import Config
 from MySQLStorage import (
     Users_communities, Weeks, Days, Subjects, Lesson_start_end, Users_tasks, Groups, ExamDays, Disciplines
 )
+from VkBotConstants import ANSI_ESCAPE
 from VkBotStatus import States, VkBotStatus
 
 
@@ -503,7 +505,7 @@ class VkBotFunctions:
                 is_place_empty = True
                 if lesson_end_time is None:
                     for j in task_list:
-                        if j[0] < lesson_start_time < j[1] or j[0] > lesson_start_time < j[1] or\
+                        if j[0] < lesson_start_time < j[1] or j[0] > lesson_start_time < j[1] or \
                                 j[0] == lesson_start_time:
                             is_place_empty = False
                             break
@@ -713,3 +715,33 @@ class VkBotFunctions:
         elif show_url and len(communities) > 0:
             communities_list = ["https://vk.com/" + i['screen_name'] for i in communities_list]
         return len(communities) > 0, communities_list
+
+
+class OutputFileHandler:
+    def __init__(self, file=None):
+        self.file = file
+        self.stdout = sys.stdout
+        sys.stdout = self
+
+    def __del__(self):
+        sys.stdout = self.stdout
+        if self.file is not None:
+            self.file.close()
+
+    def write(self, data, **kwargs):
+        if data != "\n":
+            if self.file is not None:
+                self.file.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                                f"{ANSI_ESCAPE.sub('', data)}")
+            self.stdout.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {data}")
+        else:
+            if self.file is not None:
+                self.file.write(data)
+            self.stdout.write(data)
+        self.flush()
+        if kwargs.pop('flush', False):
+            self.stdout.flush()
+
+    def flush(self):
+        if self.file is not None:
+            self.file.flush()

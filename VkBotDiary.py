@@ -22,6 +22,7 @@ from MySQLStorage import (
 )
 from SpeechRecognizer import SpeechRecognizer
 from VkBotChat import VkBotChat
+from VkBotFunctions import OutputFileHandler
 from VkBotParser import Parser
 
 
@@ -133,6 +134,7 @@ def parse_message(vk_session: VkApi, vk_session_user: VkApi, text: str, attachme
 def main() -> None:
     """Функция запуска бота и прослушивание им сообщений от пользователя"""
     Config.read_config()
+    OutputFileHandler()
     print(Fore.BLUE + "Файл настроек загружен!" + Style.RESET_ALL)
     try:
         vk_session = VkApi(token=Config.get_token())

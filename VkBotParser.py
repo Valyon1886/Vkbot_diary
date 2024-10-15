@@ -97,7 +97,7 @@ class Parser:
             page = get("https://www.mirea.ru/schedule/")
             soup = BeautifulSoup(page.text, "html.parser")
             uni_names = soup.find("div", {"class": "schedule"}).find_all("a", {"class": "uk-text-bold"})
-            uni_names = list(set([sub(r"\n\s{2,}", " ", i.contents[0]) for i in uni_names]))
+            uni_names = list(set([sub(r"\n\s{2,}", " ", i.contents[0]) for i in uni_names if len(i.contents) > 0]))
             with suppress(ValueError):
                 uni_names.remove("Филиал в городе Ставрополе")
             for name in uni_names:

@@ -285,7 +285,7 @@ class VkBotChat:
         sticker_id: int
             id стикера
         """
-        for msg in wrap(message, width=6144, replace_whitespace=False):
+        for msg in wrap(message, width=4096, replace_whitespace=False):
             payload = {
                 'user_id': self._user_id,
                 'message': msg,

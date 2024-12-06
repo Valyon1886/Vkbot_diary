@@ -285,7 +285,8 @@ class VkBotChat:
         sticker_id: int
             id стикера
         """
-        for msg in wrap(message, width=4096, replace_whitespace=False):
+        # Vk set max symbols limit to 4096 but actual for special characters is lower...
+        for msg in wrap(message, width=3500, replace_whitespace=False):
             payload = {
                 'user_id': self._user_id,
                 'message': msg,

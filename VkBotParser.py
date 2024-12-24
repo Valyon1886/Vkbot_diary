@@ -96,6 +96,10 @@ class Parser:
             # Parsing html page for links
             page = get("https://www.mirea.ru/schedule/")
             soup = BeautifulSoup(page.text, "html.parser")
+            # Tabs with names:
+            # [...document.querySelector(`div.schedule`).querySelectorAll(`ul.uk-tab > li`)].map(e => e.textContent.trim())
+            # Grid to look at, i - num in first list
+            # [...document.querySelector(`div.schedule`).querySelectorAll(`#tab-content > li`)][0]
             uni_names = soup.find("div", {"class": "schedule"}).find_all("a", {"class": "uk-text-bold"})
             uni_names = list(set([sub(r"\n\s{2,}", " ", i.contents[0]) for i in uni_names if len(i.contents) > 0]))
             with suppress(ValueError):
